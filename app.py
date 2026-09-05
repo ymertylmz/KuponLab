@@ -1,10 +1,11 @@
 import streamlit as st
 import requests
 from datetime import date, datetime
-import time
+from zoneinfo import ZoneInfo
+import textwrap
 
 # =========================================================
-# KUPONLAB
+# KUPONLAB V2
 # =========================================================
 
 st.set_page_config(
@@ -16,7 +17,63 @@ st.set_page_config(
 API_BASE = "https://v3.football.api-sports.io"
 
 # =========================================================
-# TASARIM
+# 40 LİG
+# 32 ZASLUGABET ANA LİG
+# + 5 EK LİG
+# + 3 UEFA KUPASI
+# =========================================================
+
+LEAGUES = {
+    140: "🇪🇸 İspanya - La Liga",
+    39: "🏴 İngiltere - Premier League",
+    40: "🏴 İngiltere - Championship",
+    135: "🇮🇹 İtalya - Serie A",
+    61: "🇫🇷 Fransa - Ligue 1",
+    62: "🇫🇷 Fransa - Ligue 2",
+    78: "🇩🇪 Almanya - Bundesliga",
+    79: "🇩🇪 Almanya - 2. Bundesliga",
+    80: "🇩🇪 Almanya - 3. Liga",
+    94: "🇵🇹 Portekiz - Primeira Liga",
+    203: "🇹🇷 Türkiye - Süper Lig",
+    244: "🇫🇮 Finlandiya - Veikkausliiga",
+    219: "🇦🇹 Avusturya - 2. Liga",
+    119: "🇩🇰 Danimarka - Superliga",
+    114: "🇸🇪 İsveç - Superettan",
+    103: "🇳🇴 Norveç - Eliteserien",
+    218: "🇦🇹 Avusturya - Bundesliga",
+    88: "🇳🇱 Hollanda - Eredivisie",
+    89: "🇳🇱 Hollanda - Eerste Divisie",
+    180: "🏴 İskoçya - Championship",
+    106: "🇵🇱 Polonya - Ekstraklasa",
+    63: "🇫🇷 Fransa - Ligue 3",
+    144: "🇧🇪 Belçika - Pro League",
+    357: "🇮🇪 İrlanda - Premier Division",
+    408: "🇬🇧 Kuzey İrlanda - Premiership",
+    120: "🇩🇰 Danimarka - 1. Division",
+    235: "🇷🇺 Rusya - Premier League",
+    113: "🇸🇪 İsveç - Allsvenskan",
+    41: "🏴 İngiltere - League One",
+    42: "🏴 İngiltere - League Two",
+    179: "🏴 İskoçya - Premiership",
+    207: "🇨🇭 İsviçre - Super League",
+
+    # 5 EK LİG
+    141: "🇪🇸 İspanya - La Liga 2",
+    197: "🇬🇷 Yunanistan - Super League",
+    169: "🇨🇳 Çin - Super League",
+    253: "🇺🇸 ABD - MLS",
+    43: "🏴 İngiltere - National League",
+
+    # UEFA
+    2: "🏆 UEFA Şampiyonlar Ligi",
+    3: "🏆 UEFA Avrupa Ligi",
+    848: "🏆 UEFA Konferans Ligi",
+}
+
+ALLOWED_LEAGUE_IDS = set(LEAGUES.keys())
+
+# =========================================================
+# CSS
 # =========================================================
 
 st.markdown("""
@@ -28,127 +85,174 @@ st.markdown("""
 }
 
 .block-container {
-    max-width: 760px;
+    max-width: 780px;
     padding-top: 1.2rem;
-    padding-bottom: 4rem;
+    padding-bottom: 5rem;
 }
 
 h1, h2, h3 {
-    color: white;
+    color: white !important;
 }
 
 .logo {
-    text-align:center;
-    margin-bottom:25px;
+    text-align: center;
+    margin-bottom: 22px;
 }
 
 .logo-title {
-    font-size:42px;
-    font-weight:900;
+    font-size: 42px;
+    font-weight: 900;
+    letter-spacing: -1px;
 }
 
 .logo-green {
-    color:#38e078;
+    color: #38e078;
 }
 
 .logo-sub {
-    color:#8394aa;
-    font-size:18px;
+    color: #8798ab;
+    font-size: 17px;
+    margin-top: -5px;
 }
 
-.card {
-    background:#101d2d;
-    border:1px solid #20354a;
-    border-radius:18px;
-    padding:16px;
-    margin-bottom:12px;
+.statbox {
+    background: #0d1a2a;
+    border: 1px solid #1d344b;
+    border-radius: 16px;
+    padding: 14px;
+    text-align: center;
+    margin-bottom: 15px;
 }
 
-.pick-title {
-    font-size:17px;
-    font-weight:800;
+.match-card {
+    background: linear-gradient(
+        145deg,
+        #101d2d,
+        #0c1725
+    );
+    border: 1px solid #20354a;
+    border-radius: 18px;
+    padding: 17px;
+    margin-bottom: 13px;
 }
 
-.meta {
-    color:#8798ab;
-    font-size:13px;
+.rank {
+    color: #6f849a;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.league {
+    color: #8ea0b3;
+    font-size: 12px;
+    margin-top: 3px;
+}
+
+.match-name {
+    color: white;
+    font-size: 17px;
+    font-weight: 800;
+    margin-top: 7px;
 }
 
 .market {
-    color:#38e078;
-    font-weight:900;
-    font-size:17px;
+    color: #38e078;
+    font-size: 18px;
+    font-weight: 900;
+    margin-top: 12px;
 }
 
-.score-big {
-    font-size:25px;
-    font-weight:900;
+.score-green {
+    color: #38e078;
+    font-size: 25px;
+    font-weight: 900;
 }
 
-.green {
-    color:#38e078;
+.score-yellow {
+    color: #ffd15a;
+    font-size: 25px;
+    font-weight: 900;
 }
 
-.yellow {
-    color:#ffd255;
+.score-orange {
+    color: #ff9d4d;
+    font-size: 25px;
+    font-weight: 900;
 }
 
-.red {
-    color:#ff6868;
+.score-red {
+    color: #ff6868;
+    font-size: 25px;
+    font-weight: 900;
 }
 
 .coupon-safe {
-    background:#10281d;
-    border:1px solid #236440;
-    border-radius:18px;
-    padding:17px;
-    margin-bottom:15px;
+    background: #10281d;
+    border: 1px solid #276944;
+    border-radius: 18px;
+    padding: 18px;
+    margin-bottom: 14px;
 }
 
 .coupon-main {
-    background:#2a220f;
-    border:1px solid #765b18;
-    border-radius:18px;
-    padding:17px;
-    margin-bottom:15px;
+    background: #29220f;
+    border: 1px solid #705b20;
+    border-radius: 18px;
+    padding: 18px;
+    margin-bottom: 14px;
 }
 
 .coupon-bomb {
-    background:#2a1518;
-    border:1px solid #70343a;
-    border-radius:18px;
-    padding:17px;
-    margin-bottom:15px;
+    background: #291518;
+    border: 1px solid #71383e;
+    border-radius: 18px;
+    padding: 18px;
+    margin-bottom: 14px;
+}
+
+.coupon-row {
+    border-top: 1px solid rgba(255,255,255,.09);
+    padding-top: 9px;
+    margin-top: 9px;
 }
 
 div.stButton > button {
-    width:100%;
-    background:#38e078;
-    color:#04140b;
-    border:none;
-    font-weight:900;
-    font-size:17px;
-    border-radius:14px;
-    min-height:52px;
+    width: 100%;
+    background: #38e078;
+    color: #04140b;
+    border: none;
+    font-weight: 900;
+    font-size: 17px;
+    border-radius: 14px;
+    min-height: 52px;
+}
+
+div.stButton > button:hover {
+    background: #4cef88;
+    color: #04140b;
+    border: none;
 }
 
 </style>
 """, unsafe_allow_html=True)
 
 # =========================================================
-# LOGO
+# HEADER
 # =========================================================
 
-st.markdown("""
-<div class="logo">
-    <div class="logo-title">
-        ⚽ Kupon<span class="logo-green">Lab</span>
+st.markdown(
+    """
+    <div class="logo">
+        <div class="logo-title">
+            ⚽ Kupon<span class="logo-green">Lab</span>
+        </div>
+        <div class="logo-sub">
+            Maçı değil, veriyi oyna.
+        </div>
     </div>
-    <div class="logo-sub">
-        Maçı değil, veriyi oyna.
-    </div>
-</div>
-""", unsafe_allow_html=True)
+    """,
+    unsafe_allow_html=True
+)
 
 # =========================================================
 # API KEY
@@ -161,36 +265,43 @@ api_key = st.text_input(
 )
 
 if not api_key:
-    st.info("API-Football key'i gir, sonra tarihi seçip taramayı başlat.")
+    st.info(
+        "API-Football key'i gir. "
+        "Sonra tarihi seçip taramayı başlat."
+    )
     st.stop()
 
-HEADERS = {
-    "x-apisports-key": api_key
-}
-
 # =========================================================
-# API
+# API FONKSİYONU
 # =========================================================
 
 @st.cache_data(ttl=900, show_spinner=False)
-def api_get(endpoint, params, key):
+def api_get(endpoint, params, api_key):
+
     try:
-        r = requests.get(
+
+        response = requests.get(
             API_BASE + endpoint,
-            headers={"x-apisports-key": key},
+            headers={
+                "x-apisports-key": api_key
+            },
             params=params,
-            timeout=20
+            timeout=25
         )
 
-        data = r.json()
+        try:
+            data = response.json()
+        except Exception:
+            data = {}
 
         return {
-            "ok": r.ok,
-            "status": r.status_code,
+            "ok": response.ok,
+            "status": response.status_code,
             "data": data
         }
 
     except Exception as e:
+
         return {
             "ok": False,
             "status": 500,
@@ -200,6 +311,10 @@ def api_get(endpoint, params, key):
         }
 
 
+# =========================================================
+# TAKIM SON 5
+# =========================================================
+
 @st.cache_data(ttl=1800, show_spinner=False)
 def get_team_form(team_id, api_key):
 
@@ -207,7 +322,8 @@ def get_team_form(team_id, api_key):
         "/fixtures",
         {
             "team": team_id,
-            "last": 5
+            "last": 5,
+            "status": "FT"
         },
         api_key
     )
@@ -215,40 +331,53 @@ def get_team_form(team_id, api_key):
     if not result["ok"]:
         return None
 
-    matches = result["data"].get("response", [])
-
-    if not matches:
+    if result["data"].get("errors"):
         return None
 
-    goals_for = []
-    goals_against = []
+    fixtures = result["data"].get(
+        "response",
+        []
+    )
+
+    if not fixtures:
+        return None
+
+    gf_list = []
+    ga_list = []
 
     over15 = 0
     over25 = 0
+    over35 = 0
     btts = 0
+
     wins = 0
     draws = 0
     losses = 0
 
-    for m in matches:
+    scored_matches = 0
+    conceded_matches = 0
 
-        home_id = m["teams"]["home"]["id"]
+    first_half_goals = 0
 
-        home_goals = m["goals"]["home"]
-        away_goals = m["goals"]["away"]
+    for fixture in fixtures:
 
-        if home_goals is None or away_goals is None:
+        home_id = fixture["teams"]["home"]["id"]
+
+        hg = fixture["goals"]["home"]
+        ag = fixture["goals"]["away"]
+
+        if hg is None or ag is None:
             continue
 
         if home_id == team_id:
-            gf = home_goals
-            ga = away_goals
+            gf = hg
+            ga = ag
         else:
-            gf = away_goals
-            ga = home_goals
+            gf = ag
+            ga = hg
 
-        goals_for.append(gf)
-        goals_against.append(ga)
+        gf_list.append(gf)
+        ga_list.append(ga)
 
         total = gf + ga
 
@@ -258,132 +387,228 @@ def get_team_form(team_id, api_key):
         if total >= 3:
             over25 += 1
 
+        if total >= 4:
+            over35 += 1
+
         if gf > 0 and ga > 0:
             btts += 1
 
+        if gf > 0:
+            scored_matches += 1
+
+        if ga > 0:
+            conceded_matches += 1
+
         if gf > ga:
             wins += 1
+
         elif gf == ga:
             draws += 1
+
         else:
             losses += 1
 
-    played = len(goals_for)
+        halftime = fixture.get(
+            "score",
+            {}
+        ).get(
+            "halftime",
+            {}
+        )
+
+        hth = halftime.get("home")
+        hta = halftime.get("away")
+
+        if hth is not None and hta is not None:
+            first_half_goals += hth + hta
+
+    played = len(gf_list)
 
     if played == 0:
         return None
 
     return {
         "played": played,
-        "gf_avg": sum(goals_for) / played,
-        "ga_avg": sum(goals_against) / played,
-        "over15": over15 / played,
-        "over25": over25 / played,
-        "btts": btts / played,
-        "win_rate": wins / played,
-        "draw_rate": draws / played,
-        "loss_rate": losses / played
+
+        "gf_avg":
+            sum(gf_list) / played,
+
+        "ga_avg":
+            sum(ga_list) / played,
+
+        "total_goal_avg":
+            (
+                sum(gf_list) +
+                sum(ga_list)
+            ) / played,
+
+        "over15":
+            over15 / played,
+
+        "over25":
+            over25 / played,
+
+        "over35":
+            over35 / played,
+
+        "btts":
+            btts / played,
+
+        "scored_rate":
+            scored_matches / played,
+
+        "conceded_rate":
+            conceded_matches / played,
+
+        "win_rate":
+            wins / played,
+
+        "draw_rate":
+            draws / played,
+
+        "loss_rate":
+            losses / played,
+
+        "first_half_goal_avg":
+            first_half_goals / played
     }
 
+
 # =========================================================
-# ANALİZ MOTORU
+# PUAN MOTORU
 # =========================================================
 
-def clamp(value):
-    return max(0, min(100, round(value)))
+def score_limit(value):
+
+    # Artık 100/100 yok.
+    return max(
+        35,
+        min(
+            94,
+            round(value)
+        )
+    )
 
 
-def analyse_match(home_form, away_form):
+def analyse_match(home, away):
 
-    if not home_form or not away_form:
+    if not home or not away:
         return None
 
-    # -----------------------------------------------------
+    # =====================================================
     # 1.5 ÜST
-    # -----------------------------------------------------
+    # =====================================================
 
-    over15_score = clamp(
-        (
-            home_form["over15"] * 0.35 +
-            away_form["over15"] * 0.35 +
-            min(
-                (
-                    home_form["gf_avg"] +
-                    home_form["ga_avg"] +
-                    away_form["gf_avg"] +
-                    away_form["ga_avg"]
-                ) / 6,
-                1
-            ) * 0.30
-        ) * 100
+    over15_raw = (
+        home["over15"] * 26 +
+        away["over15"] * 26 +
+        home["scored_rate"] * 10 +
+        away["scored_rate"] * 10 +
+        home["conceded_rate"] * 7 +
+        away["conceded_rate"] * 7 +
+        min(
+            (
+                home["total_goal_avg"] +
+                away["total_goal_avg"]
+            ) / 6,
+            1
+        ) * 14
     )
 
-    # -----------------------------------------------------
+    over15 = score_limit(
+        48 + over15_raw * 0.46
+    )
+
+    # =====================================================
     # 2.5 ÜST
-    # -----------------------------------------------------
+    # =====================================================
 
-    over25_score = clamp(
-        (
-            home_form["over25"] * 0.40 +
-            away_form["over25"] * 0.40 +
-            min(
-                (
-                    home_form["gf_avg"] +
-                    away_form["gf_avg"]
-                ) / 3.5,
-                1
-            ) * 0.20
-        ) * 100
+    over25_raw = (
+        home["over25"] * 30 +
+        away["over25"] * 30 +
+        home["btts"] * 8 +
+        away["btts"] * 8 +
+        min(
+            (
+                home["gf_avg"] +
+                away["gf_avg"]
+            ) / 3.5,
+            1
+        ) * 12 +
+        min(
+            (
+                home["total_goal_avg"] +
+                away["total_goal_avg"]
+            ) / 6,
+            1
+        ) * 12
     )
 
-    # -----------------------------------------------------
+    over25 = score_limit(
+        44 + over25_raw * 0.48
+    )
+
+    # =====================================================
     # KG VAR
-    # -----------------------------------------------------
+    # =====================================================
 
-    btts_score = clamp(
-        (
-            home_form["btts"] * 0.40 +
-            away_form["btts"] * 0.40 +
-            min(
-                (
-                    home_form["gf_avg"] +
-                    away_form["gf_avg"]
-                ) / 3,
-                1
-            ) * 0.20
-        ) * 100
+    btts_raw = (
+        home["btts"] * 28 +
+        away["btts"] * 28 +
+        home["scored_rate"] * 12 +
+        away["scored_rate"] * 12 +
+        home["conceded_rate"] * 10 +
+        away["conceded_rate"] * 10
     )
 
-    # -----------------------------------------------------
-    # 1X
-    # -----------------------------------------------------
-
-    home_safe = clamp(
-        (
-            home_form["win_rate"] * 0.55 +
-            home_form["draw_rate"] * 0.25 +
-            away_form["loss_rate"] * 0.20
-        ) * 100
+    btts = score_limit(
+        42 + btts_raw * 0.50
     )
 
-    # -----------------------------------------------------
-    # X2
-    # -----------------------------------------------------
+    # =====================================================
+    # EV SAHİBİ 1X
+    # =====================================================
 
-    away_safe = clamp(
+    home_double_raw = (
+        home["win_rate"] * 32 +
+        home["draw_rate"] * 20 +
+        away["loss_rate"] * 28 +
         (
-            away_form["win_rate"] * 0.55 +
-            away_form["draw_rate"] * 0.25 +
-            home_form["loss_rate"] * 0.20
-        ) * 100
+            1 - away["win_rate"]
+        ) * 20
     )
+
+    home_double = score_limit(
+        44 + home_double_raw * 0.48
+    )
+
+    # =====================================================
+    # DEPLASMAN X2
+    # =====================================================
+
+    away_double_raw = (
+        away["win_rate"] * 32 +
+        away["draw_rate"] * 20 +
+        home["loss_rate"] * 28 +
+        (
+            1 - home["win_rate"]
+        ) * 20
+    )
+
+    away_double = score_limit(
+        44 + away_double_raw * 0.48
+    )
+
+    # =====================================================
+    # MARKETLER
+    # =====================================================
 
     markets = {
-        "1.5 Üst": over15_score,
-        "2.5 Üst": over25_score,
-        "KG Var": btts_score,
-        "1X": home_safe,
-        "X2": away_safe
+        "1.5 Üst": over15,
+        "2.5 Üst": over25,
+        "KG Var": btts,
+        "1X": home_double,
+        "X2": away_double
     }
 
     best_market = max(
@@ -391,11 +616,55 @@ def analyse_match(home_form, away_form):
         key=markets.get
     )
 
+    best_score = markets[best_market]
+
+    # İkinci güçlü market
+    sorted_markets = sorted(
+        markets.items(),
+        key=lambda x: x[1],
+        reverse=True
+    )
+
+    second_market = sorted_markets[1]
+
     return {
         "market": best_market,
-        "score": markets[best_market],
+        "score": best_score,
+        "second_market": second_market[0],
+        "second_score": second_market[1],
         "markets": markets
     }
+
+
+# =========================================================
+# SAAT
+# =========================================================
+
+def turkey_time(api_date):
+
+    try:
+
+        dt = datetime.fromisoformat(
+            api_date.replace(
+                "Z",
+                "+00:00"
+            )
+        )
+
+        dt = dt.astimezone(
+            ZoneInfo(
+                "Europe/Istanbul"
+            )
+        )
+
+        return dt.strftime(
+            "%H:%M"
+        )
+
+    except Exception:
+
+        return "--:--"
+
 
 # =========================================================
 # TARİH
@@ -406,8 +675,19 @@ selected_date = st.date_input(
     value=date.today()
 )
 
+with st.expander(
+    "🌍 Taranan 40 ligi göster"
+):
+
+    for league_id, league_name in LEAGUES.items():
+
+        st.write(
+            f"{league_name}  •  ID {league_id}"
+        )
+
+
 scan = st.button(
-    "🔍 BUGÜNÜ TARA"
+    "🔍 GÜNÜ TARA"
 )
 
 # =========================================================
@@ -416,59 +696,152 @@ scan = st.button(
 
 if scan:
 
-    with st.spinner("Maçlar getiriliyor..."):
+    # =====================================================
+    # GÜNÜN BÜTÜN MAÇLARINI TEK İSTEKLE AL
+    # =====================================================
 
-        fixture_result = api_get(
+    with st.spinner(
+        "⚽ Günün maçları getiriliyor..."
+    ):
+
+        result = api_get(
             "/fixtures",
             {
-                "date": selected_date.strftime("%Y-%m-%d"),
-                "timezone": "Europe/Istanbul"
+                "date":
+                    selected_date.strftime(
+                        "%Y-%m-%d"
+                    ),
+
+                "timezone":
+                    "Europe/Istanbul"
             },
             api_key
         )
 
-    if not fixture_result["ok"]:
+    if not result["ok"]:
 
         st.error(
-            f"API hatası: {fixture_result['status']}"
+            f"API bağlantı hatası: "
+            f"{result['status']}"
         )
 
         st.json(
-            fixture_result["data"]
+            result["data"]
         )
 
         st.stop()
 
-    api_errors = fixture_result["data"].get(
+    api_errors = result["data"].get(
         "errors",
         {}
     )
 
     if api_errors:
 
-        st.error("API-Football hata döndürdü:")
-        st.json(api_errors)
-        st.stop()
+        st.error(
+            "API-Football hata döndürdü."
+        )
 
-    fixtures = fixture_result["data"].get(
-        "response",
-        []
-    )
-
-    st.success(
-        f"⚽ {len(fixtures)} maç bulundu."
-    )
-
-    if len(fixtures) == 0:
-
-        st.warning(
-            "Bu tarihte API hesabının erişebildiği maç bulunamadı."
+        st.json(
+            api_errors
         )
 
         st.stop()
 
-    # API kotasını yakmamak için ilk etapta max 40 maç
-    fixtures = fixtures[:40]
+    all_fixtures = result[
+        "data"
+    ].get(
+        "response",
+        []
+    )
+
+    # =====================================================
+    # SADECE 40 LİG
+    # =====================================================
+
+    fixtures = []
+
+    for fixture in all_fixtures:
+
+        league_id = fixture[
+            "league"
+        ][
+            "id"
+        ]
+
+        if league_id not in ALLOWED_LEAGUE_IDS:
+            continue
+
+        status = fixture[
+            "fixture"
+        ][
+            "status"
+        ][
+            "short"
+        ]
+
+        # İptal / ertelenmiş maçları alma
+        if status in [
+            "CANC",
+            "PST",
+            "ABD",
+            "AWD",
+            "WO"
+        ]:
+            continue
+
+        fixtures.append(
+            fixture
+        )
+
+    # =====================================================
+    # ÖZET
+    # =====================================================
+
+    c1, c2 = st.columns(2)
+
+    with c1:
+
+        st.markdown(
+            f"""
+            <div class="statbox">
+                <b>🌍 Toplam maç</b><br>
+                <span style="font-size:25px">
+                    {len(all_fixtures)}
+                </span>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    with c2:
+
+        st.markdown(
+            f"""
+            <div class="statbox">
+                <b>🎯 40 ligde</b><br>
+                <span style="
+                    font-size:25px;
+                    color:#38e078
+                ">
+                    {len(fixtures)}
+                </span>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    if not fixtures:
+
+        st.warning(
+            "Seçilen tarihte bizim 40 ligimizde maç bulunamadı."
+        )
+
+        st.stop()
+
+    # =====================================================
+    # ANALİZ
+    # =====================================================
 
     analysed = []
 
@@ -478,14 +851,30 @@ if scan:
 
     total = len(fixtures)
 
-    for i, fixture in enumerate(fixtures):
+    for index, fixture in enumerate(
+        fixtures
+    ):
 
-        home = fixture["teams"]["home"]
-        away = fixture["teams"]["away"]
-        league = fixture["league"]
+        home = fixture[
+            "teams"
+        ][
+            "home"
+        ]
+
+        away = fixture[
+            "teams"
+        ][
+            "away"
+        ]
+
+        league = fixture[
+            "league"
+        ]
 
         status_text.write(
-            f"🧠 Analiz: {home['name']} - {away['name']}"
+            f"🧠 {index + 1}/{total} "
+            f"{home['name']} - "
+            f"{away['name']}"
         )
 
         home_form = get_team_form(
@@ -505,204 +894,349 @@ if scan:
 
         if analysis:
 
-            match_time = fixture["fixture"]["date"]
-
-            try:
-                dt = datetime.fromisoformat(
-                    match_time.replace("Z", "+00:00")
-                )
-
-                time_text = dt.strftime("%H:%M")
-
-            except:
-                time_text = "--:--"
-
             analysed.append({
-                "fixture_id": fixture["fixture"]["id"],
-                "home": home["name"],
-                "away": away["name"],
-                "league": league["name"],
-                "country": league["country"],
-                "time": time_text,
-                "market": analysis["market"],
-                "score": analysis["score"],
-                "markets": analysis["markets"],
-                "home_form": home_form,
-                "away_form": away_form
+                "fixture_id":
+                    fixture[
+                        "fixture"
+                    ][
+                        "id"
+                    ],
+
+                "home":
+                    home["name"],
+
+                "away":
+                    away["name"],
+
+                "league_id":
+                    league["id"],
+
+                "league":
+                    LEAGUES.get(
+                        league["id"],
+                        league["name"]
+                    ),
+
+                "time":
+                    turkey_time(
+                        fixture[
+                            "fixture"
+                        ][
+                            "date"
+                        ]
+                    ),
+
+                "market":
+                    analysis["market"],
+
+                "score":
+                    analysis["score"],
+
+                "second_market":
+                    analysis[
+                        "second_market"
+                    ],
+
+                "second_score":
+                    analysis[
+                        "second_score"
+                    ],
+
+                "markets":
+                    analysis["markets"],
+
+                "home_form":
+                    home_form,
+
+                "away_form":
+                    away_form
             })
 
         progress.progress(
-            (i + 1) / total
+            (index + 1) / total
         )
 
     progress.empty()
     status_text.empty()
 
-    # =====================================================
-    # SONUÇLAR
-    # =====================================================
-
-    analysed = sorted(
-        analysed,
-        key=lambda x: x["score"],
-        reverse=True
-    )
-
-    top = analysed[:10]
-
-    st.markdown(
-        "## 🏆 Günün En İyi Seçimleri"
-    )
-
-    if not top:
+    if not analysed:
 
         st.warning(
-            "Analiz edilebilen yeterli maç bulunamadı."
+            "Maçlar bulundu ancak yeterli geçmiş veriyle analiz yapılamadı."
         )
 
         st.stop()
 
-    for index, m in enumerate(top, 1):
+    # =====================================================
+    # SIRALA
+    # =====================================================
 
-        if m["score"] >= 80:
-            color = "green"
+    analysed.sort(
+        key=lambda x: x["score"],
+        reverse=True
+    )
+
+    top10 = analysed[:10]
+
+    # =====================================================
+    # TOP 10
+    # =====================================================
+
+    st.markdown(
+        "## 🏆 Günün En İyi 10 Seçimi"
+    )
+
+    for rank, match in enumerate(
+        top10,
+        1
+    ):
+
+        score = match["score"]
+
+        if score >= 86:
+
             icon = "🔥"
-        elif m["score"] >= 70:
-            color = "yellow"
+            score_class = "score-green"
+            grade = "ÇOK GÜÇLÜ"
+
+        elif score >= 80:
+
             icon = "🟢"
-        else:
-            color = "red"
+            score_class = "score-green"
+            grade = "GÜÇLÜ"
+
+        elif score >= 74:
+
             icon = "🟡"
+            score_class = "score-yellow"
+            grade = "İYİ"
+
+        elif score >= 68:
+
+            icon = "🟠"
+            score_class = "score-orange"
+            grade = "ORTA"
+
+        else:
+
+            icon = "🔴"
+            score_class = "score-red"
+            grade = "RİSKLİ"
+
+        card = f"""
+        <div class="match-card">
+
+            <div class="rank">
+                #{rank} • {match['time']}
+            </div>
+
+            <div class="league">
+                {match['league']}
+            </div>
+
+            <div class="match-name">
+                {match['home']}
+                <br>
+                {match['away']}
+            </div>
+
+            <div class="market">
+                {icon} {match['market']}
+            </div>
+
+            <div class="{score_class}">
+                {score}/100
+            </div>
+
+            <div style="
+                color:#91a2b4;
+                font-size:12px;
+            ">
+                {grade}
+                • 2. seçenek:
+                {match['second_market']}
+                {match['second_score']}/100
+            </div>
+
+        </div>
+        """
 
         st.markdown(
-            f"""
-            <div class="card">
-
-                <div class="meta">
-                    #{index} • {m['country']} • {m['league']} • {m['time']}
-                </div>
-
-                <div class="pick-title">
-                    {m['home']} - {m['away']}
-                </div>
-
-                <br>
-
-                <div class="market">
-                    {icon} {m['market']}
-                </div>
-
-                <div class="score-big {color}">
-                    {m['score']}/100
-                </div>
-
-            </div>
-            """,
+            textwrap.dedent(card),
             unsafe_allow_html=True
         )
 
         with st.expander(
-            "📊 Detaylı analiz"
+            f"📊 #{rank} Detaylı analiz"
         ):
 
-            st.write(
-                "Ev sahibi son 5:"
+            h = match["home_form"]
+            a = match["away_form"]
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+
+                st.markdown(
+                    f"### 🏠 {match['home']}"
+                )
+
+                st.write(
+                    f"Gol ortalaması: "
+                    f"**{h['gf_avg']:.2f}**"
+                )
+
+                st.write(
+                    f"Yediği gol: "
+                    f"**{h['ga_avg']:.2f}**"
+                )
+
+                st.write(
+                    f"1.5 Üst: "
+                    f"**%{h['over15'] * 100:.0f}**"
+                )
+
+                st.write(
+                    f"2.5 Üst: "
+                    f"**%{h['over25'] * 100:.0f}**"
+                )
+
+                st.write(
+                    f"KG Var: "
+                    f"**%{h['btts'] * 100:.0f}**"
+                )
+
+            with col2:
+
+                st.markdown(
+                    f"### ✈️ {match['away']}"
+                )
+
+                st.write(
+                    f"Gol ortalaması: "
+                    f"**{a['gf_avg']:.2f}**"
+                )
+
+                st.write(
+                    f"Yediği gol: "
+                    f"**{a['ga_avg']:.2f}**"
+                )
+
+                st.write(
+                    f"1.5 Üst: "
+                    f"**%{a['over15'] * 100:.0f}**"
+                )
+
+                st.write(
+                    f"2.5 Üst: "
+                    f"**%{a['over25'] * 100:.0f}**"
+                )
+
+                st.write(
+                    f"KG Var: "
+                    f"**%{a['btts'] * 100:.0f}**"
+                )
+
+            st.markdown(
+                "#### 🎯 Market Puanları"
             )
 
-            st.json(
-                m["home_form"]
-            )
+            for market, market_score in sorted(
+                match["markets"].items(),
+                key=lambda x: x[1],
+                reverse=True
+            ):
 
-            st.write(
-                "Deplasman son 5:"
-            )
-
-            st.json(
-                m["away_form"]
-            )
-
-            st.write(
-                "Market skorları:"
-            )
-
-            st.json(
-                m["markets"]
-            )
+                st.write(
+                    f"**{market}:** "
+                    f"{market_score}/100"
+                )
 
     # =====================================================
-    # KUPONLAR
+    # KUPON MOTORU
     # =====================================================
 
     st.markdown(
-        "## 🎟️ Otomatik Kuponlar"
+        "## 🎟️ KuponLab Kuponları"
     )
 
+    # Aynı maçı bir kez kullan
     strong = [
-        m for m in analysed
-        if m["score"] >= 78
+        x for x in analysed
+        if x["score"] >= 82
     ][:3]
 
     main_coupon = [
-        m for m in analysed
-        if m["score"] >= 70
+        x for x in analysed
+        if x["score"] >= 75
     ][:5]
 
     bomb = [
-        m for m in analysed
-        if m["score"] >= 62
+        x for x in analysed
+        if x["score"] >= 68
     ][:7]
 
     def coupon_html(
         title,
-        coupon,
+        matches,
         css_class
     ):
 
-        rows = ""
-
-        for x in coupon:
-
-            rows += f"""
-            <div style="
-                margin-top:10px;
-                padding-top:10px;
-                border-top:1px solid rgba(255,255,255,.08);
-            ">
-
-                <b>
-                    {x['home']} - {x['away']}
-                </b>
-
-                <br>
-
-                <span style="color:#38e078">
-                    {x['market']}
-                </span>
-
-                <span style="float:right">
-                    {x['score']}/100
-                </span>
-
-            </div>
-            """
-
-        if not coupon:
+        if not matches:
 
             rows = """
-            <div style="margin-top:10px">
-                Yeterli güçlü seçim bulunamadı.
+            <div style="
+                color:#97a6b6;
+                margin-top:8px;
+            ">
+                Bu kupon için yeterli güçlü maç çıkmadı.
             </div>
             """
 
-        return f"""
+        else:
+
+            rows = ""
+
+            for item in matches:
+
+                rows += f"""
+                <div class="coupon-row">
+
+                    <b>
+                        {item['home']}
+                        -
+                        {item['away']}
+                    </b>
+
+                    <br>
+
+                    <span style="
+                        color:#38e078;
+                        font-weight:800;
+                    ">
+                        {item['market']}
+                    </span>
+
+                    <span style="
+                        float:right;
+                        font-weight:800;
+                    ">
+                        {item['score']}/100
+                    </span>
+
+                </div>
+                """
+
+        html = f"""
         <div class="{css_class}">
-
             <h3>{title}</h3>
-
             {rows}
-
         </div>
         """
+
+        return textwrap.dedent(
+            html
+        )
 
     st.markdown(
         coupon_html(
@@ -732,6 +1266,7 @@ if scan:
     )
 
     st.caption(
-        "KuponLab V1 • Son 5 maç form verisiyle analiz yapar. "
-        "Sonraki sürümde oran, H2H, iç/dış saha, hakem ve daha gelişmiş filtreler eklenecek."
+        "KuponLab V2 • 40 seçili lig • "
+        "Son 5 maç form analizi • "
+        "Puanlar istatistiksel sinyaldir, garanti değildir."
     )

@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KuponLab</title>
+
+<style>
+*{
+  box-sizing:border-box;
+}
+
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  background:#07111f;
+  color:#fff;
+}
+
+.container{
+  max-width:650px;
+  margin:auto;
+  padding:18px;
+}
+
+.logo{
+  text-align:center;
+  margin:12px 0 22px;
+}
+
+.logo h1{
+  margin:0;
+  font-size:32px;
+}
+
+.logo span{
+  color:#38e078;
+}
+
+.logo p{
+  color:#8795a8;
+  margin-top:6px;
+}
+
+.panel{
+  background:#101d2d;
+  border:1px solid #1c3045;
+  border-radius:18px;
+  padding:16px;
+  margin-bottom:16px;
+}
+
+label{
+  display:block;
+  color:#9bacbf;
+  font-size:13px;
+  margin-bottom:7px;
+}
+
+input{
+  width:100%;
+  padding:14px;
+  background:#07111f;
+  color:white;
+  border:1px solid #294158;
+  border-radius:12px;
+  font-size:16px;
+  margin-bottom:12px;
+}
+
+button{
+  width:100%;
+  border:none;
+  border-radius:13px;
+  padding:15px;
+  font-size:16px;
+  font-weight:800;
+  cursor:pointer;
+}
+
+.scan{
+  background:#38e078;
+  color:#04130a;
+}
+
+.scan:active{
+  transform:scale(.98);
+}
+
+.hidden{
+  display:none;
+}
+
+.loading{
+  text-align:center;
+  padding:30px 10px;
+}
+
+.spinner{
+  width:45px;
+  height:45px;
+  margin:0 auto 15px;
+  border:5px solid #26384a;
+  border-top-color:#38e078;
+  border-radius:50%;
+  animation:spin .8s linear infinite;
+}
+
+@keyframes spin{
+  to{transform:rotate(360deg)}
+}
+
+.section-title{
+  font-size:20px;
+  margin:24px 0 12px;
+}
+
+.pick{
+  background:#101d2d;
+  border:1px solid #1c3045;
+  border-radius:15px;
+  padding:14px;
+  margin-bottom:10px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+.rank{
+  width:34px;
+  height:34px;
+  min-width:34px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:10px;
+  background:#17283b;
+  font-weight:800;
+}
+
+.pick-info{
+  flex:1;
+}
+
+.match{
+  font-weight:750;
+  margin-bottom:5px;
+}
+
+.meta{
+  font-size:12px;
+  color:#8292a6;
+  margin-bottom:6px;
+}
+
+.market{
+  color:#38e078;
+  font-weight:800;
+}
+
+.score{
+  text-align:right;
+  font-weight:900;
+  font-size:20px;
+}
+
+.score small{
+  display:block;
+  font-size:10px;
+  color:#7f91a6;
+}
+
+.strong{
+  color:#38e078;
+}
+
+.good{
+  color:#b9e84a;
+}
+
+.medium{
+  color:#ffc94a;
+}
+
+.coupon{
+  border-radius:18px;
+  padding:16px;
+  margin-bottom:15px;
+}
+
+.safe{
+  background:#10271d;
+  border:1px solid #215d3c;
+}
+
+.main{
+  background:#29210e;
+  border:1px solid #6a5117;
+}
+
+.bomb{
+  background:#291416;
+  border:1px solid #713238;
+}
+
+.coupon h3{
+  margin:0 0 5px;
+}
+
+.coupon-sub{
+  color:#9aa9ba;
+  font-size:12px;
+  margin-bottom:14px;
+}
+
+.coupon-row{
+  background:rgba(0,0,0,.17);
+  border-radius:10px;
+  padding:10px;
+  margin:7px 0;
+}
+
+.coupon-match{
+  font-weight:700;
+}
+
+.coupon-market{
+  margin-top:4px;
+  font-size:13px;
+}
+
+.odds{
+  float:right;
+  color:#fff;
+  font-weight:800;
+}
+
+.total{
+  margin-top:12px;
+  padding-top:12px;
+  border-top:1px solid rgba(255,255,255,.12);
+  font-size:17px;
+  font-weight:900;
+}
+
+.total span{
+  float:right;
+}
+
+.notice{
+  text-align:center;
+  color:#65788d;
+  font-size:11px;
+  margin:25px 5px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <div class="logo">
+    <h1>⚽ Kupon<span>Lab</span></h1>
+    <p>Maçı değil, veriyi oyna.</p>
+  </div>
+
+  <div class="panel">
+    <label>Analiz tarihi</label>
+    <input type="date" id="date">
+
+    <button class="scan" onclick="scanMatches()">
+      🔍 BUGÜNÜ TARA
+    </button>
+  </div>
+
+  <div id="loading" class="panel loading hidden">
+    <div class="spinner"></div>
+    <b>Maçlar analiz ediliyor...</b>
+    <div style="color:#8292a6;font-size:12px;margin-top:7px">
+      İstatistik • Form • Gol profili • Oran
+    </div>
+  </div>
+
+  <div id="results" class="hidden">
+
+    <h2 class="section-title">
+      🏆 Günün En İyi 10 Seçimi
+    </h2>
+
+    <div id="topPicks"></div>
+
+    <h2 class="section-title">
+      🎟️ Otomatik Kuponlar
+    </h2>
+
+    <div id="coupons"></div>
+
+  </div>
+
+  <div class="notice">
+    KuponLab V1 • Şimdilik demo analiz verisi kullanır.
+  </div>
+
+</div>
+
+<script>
+
+const matches = [
+  {
+    match:"Arsenal - Brighton",
+    league:"Premier League",
+    time:"17:00",
+    market:"1.5 Üst",
+    score:91,
+    odd:1.25
+  },
+  {
+    match:"PSV - Utrecht",
+    league:"Eredivisie",
+    time:"19:45",
+    market:"1.5 Üst",
+    score:89,
+    odd:1.24
+  },
+  {
+    match:"Galatasaray - Konyaspor",
+    league:"Süper Lig",
+    time:"20:00",
+    market:"MS1",
+    score:87,
+    odd:1.38
+  },
+  {
+    match:"Bayern - Mainz",
+    league:"Bundesliga",
+    time:"16:30",
+    market:"Ev 1.5 Üst",
+    score:85,
+    odd:1.42
+  },
+  {
+    match:"Benfica - Estoril",
+    league:"Liga Portugal",
+    time:"22:15",
+    market:"MS1",
+    score:83,
+    odd:1.35
+  },
+  {
+    match:"Ajax - Twente",
+    league:"Eredivisie",
+    time:"15:30",
+    market:"2.5 Üst",
+    score:81,
+    odd:1.55
+  },
+  {
+    match:"Inter - Parma",
+    league:"Serie A",
+    time:"21:45",
+    market:"1.5 Üst",
+    score:79,
+    odd:1.28
+  },
+  {
+    match:"Barcelona - Getafe",
+    league:"LaLiga",
+    time:"22:00",
+    market:"MS1",
+    score:78,
+    odd:1.40
+  },
+  {
+    match:"Feyenoord - Sparta",
+    league:"Eredivisie",
+    time:"18:00",
+    market:"2.5 Üst",
+    score:76,
+    odd:1.48
+  },
+  {
+    match:"Lille - Nantes",
+    league:"Ligue 1",
+    time:"20:00",
+    market:"1X",
+    score:74,
+    odd:1.31
+  }
+];
+
+document.getElementById("date").value =
+  new Date().toISOString().split("T")[0];
+
+function scoreClass(score){
+  if(score >= 85) return "strong";
+  if(score >= 75) return "good";
+  return "medium";
+}
+
+function scanMatches(){
+
+  document.getElementById("results").classList.add("hidden");
+  document.getElementById("loading").classList.remove("hidden");
+
+  setTimeout(() => {
+
+    document.getElementById("loading").classList.add("hidden");
+
+    renderPicks();
+    renderCoupons();
+
+    document.getElementById("results").classList.remove("hidden");
+
+  },1500);
+}
+
+function renderPicks(){
+
+  const box = document.getElementById("topPicks");
+
+  box.innerHTML = matches.map((m,i) => `
+    <div class="pick">
+
+      <div class="rank">
+        ${i+1}
+      </div>
+
+      <div class="pick-info">
+        <div class="match">
+          ${m.match}
+        </div>
+
+        <div class="meta">
+          ${m.league} • ${m.time}
+        </div>
+
+        <div class="market">
+          ${m.market} • ${m.odd.toFixed(2)}
+        </div>
+      </div>
+
+      <div class="score ${scoreClass(m.score)}">
+        ${m.score}
+        <small>SKOR</small>
+      </div>
+
+    </div>
+  `).join("");
+}
+
+function makeCoupon(title, subtitle, css, selections){
+
+  let total = 1;
+
+  selections.forEach(x => total *= x.odd);
+
+  return `
+    <div class="coupon ${css}">
+
+      <h3>${title}</h3>
+
+      <div class="coupon-sub">
+        ${subtitle}
+      </div>
+
+      ${selections.map(x => `
+        <div class="coupon-row">
+
+          <div class="coupon-match">
+            ${x.match}
+          </div>
+
+          <div class="coupon-market">
+            ${x.market}
+
+            <span class="odds">
+              ${x.odd.toFixed(2)}
+            </span>
+          </div>
+
+        </div>
+      `).join("")}
+
+      <div class="total">
+        Toplam Oran
+        <span>${total.toFixed(2)}</span>
+      </div>
+
+    </div>
+  `;
+}
+
+function renderCoupons(){
+
+  const safe = matches.slice(0,3);
+
+  const main = [
+    matches[0],
+    matches[2],
+    matches[3],
+    matches[5]
+  ];
+
+  const bomb = [
+    matches[1],
+    matches[2],
+    matches[4],
+    matches[5],
+    matches[8],
+    matches[9]
+  ];
+
+  document.getElementById("coupons").innerHTML =
+
+    makeCoupon(
+      "🛡️ SAĞLAM KUPON",
+      "En yüksek güven puanlı 3 seçim",
+      "safe",
+      safe
+    )
+
+    +
+
+    makeCoupon(
+      "🔥 ANA KUPON",
+      "Risk / oran dengesi",
+      "main",
+      main
+    )
+
+    +
+
+    makeCoupon(
+      "🚀 BOMBA KUPON",
+      "Yüksek oranlı alternatif",
+      "bomb",
+      bomb
+    );
+}
+
+</script>
+
+</body>
+</html>

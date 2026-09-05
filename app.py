@@ -4,7 +4,7 @@ from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
 # =========================================================
-# KUPONLAB V3
+# KUPONLAB V4
 # =========================================================
 
 st.set_page_config(
@@ -17,7 +17,6 @@ API_BASE = "https://v3.football.api-sports.io"
 
 # =========================================================
 # 40 LİG
-# 32 ZASLUGABET + 5 EK + 3 UEFA
 # =========================================================
 
 LEAGUES = {
@@ -54,14 +53,12 @@ LEAGUES = {
     179: "🏴 İskoçya - Premiership",
     207: "🇨🇭 İsviçre - Super League",
 
-    # 5 EK
     141: "🇪🇸 İspanya - La Liga 2",
     197: "🇬🇷 Yunanistan - Super League 1",
     169: "🇨🇳 Çin - Super League",
     253: "🇺🇸 ABD - MLS",
     43: "🏴 İngiltere - National League",
 
-    # UEFA
     2: "🏆 UEFA Şampiyonlar Ligi",
     3: "🏆 UEFA Avrupa Ligi",
     848: "🏆 UEFA Konferans Ligi",
@@ -70,12 +67,25 @@ LEAGUES = {
 ALLOWED_LEAGUE_IDS = set(LEAGUES.keys())
 
 # =========================================================
+# MARKET EŞİKLERİ
+# =========================================================
+
+MARKET_LIMITS = {
+    "2.5 Üst": 74,
+    "3.5 Üst": 71,
+    "KG Var": 73,
+    "MS 1": 72,
+    "MS 2": 72,
+    "1X": 76,
+    "X2": 76,
+}
+
+# =========================================================
 # TASARIM
 # =========================================================
 
 st.markdown("""
 <style>
-
 .stApp {
     background: #07111f;
 }
@@ -86,7 +96,7 @@ st.markdown("""
     padding-bottom: 5rem;
 }
 
-h1, h2, h3 {
+h1, h2, h3, h4 {
     color: white !important;
 }
 
@@ -105,6 +115,13 @@ p, label {
     border-radius: 18px;
 }
 
+[data-testid="stMetric"] {
+    background: #0d1928;
+    border: 1px solid #1d344b;
+    border-radius: 15px;
+    padding: 12px;
+}
+
 div.stButton > button {
     width: 100%;
     background: #38e078;
@@ -121,27 +138,11 @@ div.stButton > button:hover {
     color: #04140b;
     border: none;
 }
-
-[data-testid="stMetric"] {
-    background: #0d1928;
-    border: 1px solid #1d344b;
-    border-radius: 15px;
-    padding: 12px;
-}
-
-[data-testid="stMetricLabel"] {
-    color: #8ea0b3;
-}
-
-[data-testid="stMetricValue"] {
-    color: white;
-}
-
 </style>
 """, unsafe_allow_html=True)
 
 # =========================================================
-# LOGO
+# HEADER
 # =========================================================
 
 st.markdown(
@@ -186,13 +187,10 @@ if not api_key:
 
 @st.cache_data(ttl=900, show_spinner=False)
 def api_get(endpoint, params, api_key):
-
     try:
         response = requests.get(
             API_BASE + endpoint,
-            headers={
-                "x-apisports-key": api_key
-            },
+            headers={"x-apisports-key": api_key},
             params=params,
             timeout=30
         )
@@ -212,13 +210,11 @@ def api_get(endpoint, params, api_key):
         return {
             "ok": False,
             "status": 500,
-            "data": {
-                "error": str(e)
-            }
+            "data": {"error": str(e)}
         }
 
 # =========================================================
-# SON 5 MAÇ
+# TAKIM FORMU
 # =========================================================
 
 @st.cache_data(ttl=1800, show_spinner=False)
@@ -248,7 +244,6 @@ def get_team_form(team_id, api_key):
     gf_list = []
     ga_list = []
 
-    over15 = 0
     over25 = 0
     over35 = 0
     btts = 0
@@ -259,6 +254,9 @@ def get_team_form(team_id, api_key):
 
     scored = 0
     conceded = 0
+
+    clean_sheets = 0
+    failed_to_score = 0
 
     for fixture in fixtures:
 
@@ -282,9 +280,6 @@ def get_team_form(team_id, api_key):
 
         total = gf + ga
 
-        if total >= 2:
-            over15 += 1
-
         if total >= 3:
             over25 += 1
 
@@ -296,9 +291,13 @@ def get_team_form(team_id, api_key):
 
         if gf > 0:
             scored += 1
+        else:
+            failed_to_score += 1
 
         if ga > 0:
             conceded += 1
+        else:
+            clean_sheets += 1
 
         if gf > ga:
             wins += 1
@@ -315,168 +314,221 @@ def get_team_form(team_id, api_key):
     return {
         "played": played,
 
-        "gf_avg":
-            sum(gf_list) / played,
-
-        "ga_avg":
-            sum(ga_list) / played,
+        "gf_avg": sum(gf_list) / played,
+        "ga_avg": sum(ga_list) / played,
 
         "goal_avg":
-            (
-                sum(gf_list) +
-                sum(ga_list)
-            ) / played,
+            (sum(gf_list) + sum(ga_list)) / played,
 
-        "over15":
-            over15 / played,
+        "over25": over25 / played,
+        "over35": over35 / played,
 
-        "over25":
-            over25 / played,
+        "btts": btts / played,
 
-        "over35":
-            over35 / played,
+        "scored_rate": scored / played,
+        "conceded_rate": conceded / played,
 
-        "btts":
-            btts / played,
+        "clean_sheet_rate": clean_sheets / played,
+        "failed_score_rate": failed_to_score / played,
 
-        "scored_rate":
-            scored / played,
-
-        "conceded_rate":
-            conceded / played,
-
-        "win_rate":
-            wins / played,
-
-        "draw_rate":
-            draws / played,
-
-        "loss_rate":
-            losses / played
+        "win_rate": wins / played,
+        "draw_rate": draws / played,
+        "loss_rate": losses / played
     }
 
 # =========================================================
-# PUANLAMA
+# PUAN SINIRI
 # =========================================================
 
 def limit_score(value):
-    return max(35, min(94, round(value)))
+    return max(30, min(94, round(value)))
 
+# =========================================================
+# ANALİZ MOTORU
+# =========================================================
 
 def analyse_match(home, away):
 
     if not home or not away:
         return None
 
-    # 1.5 ÜST
-    over15_raw = (
-        home["over15"] * 24 +
-        away["over15"] * 24 +
-        home["scored_rate"] * 10 +
-        away["scored_rate"] * 10 +
-        home["conceded_rate"] * 6 +
-        away["conceded_rate"] * 6 +
-        min(
-            (
-                home["goal_avg"] +
-                away["goal_avg"]
-            ) / 6,
-            1
-        ) * 20
-    )
-
-    over15 = limit_score(
-        43 + over15_raw * 0.50
-    )
-
+    # -----------------------------------------------------
     # 2.5 ÜST
+    # -----------------------------------------------------
+
     over25_raw = (
         home["over25"] * 28 +
         away["over25"] * 28 +
-        home["btts"] * 9 +
-        away["btts"] * 9 +
+        home["btts"] * 8 +
+        away["btts"] * 8 +
+        home["scored_rate"] * 7 +
+        away["scored_rate"] * 7 +
         min(
-            (
-                home["gf_avg"] +
-                away["gf_avg"]
-            ) / 3.5,
+            (home["goal_avg"] + away["goal_avg"]) / 6.5,
             1
-        ) * 13 +
-        min(
-            (
-                home["goal_avg"] +
-                away["goal_avg"]
-            ) / 6,
-            1
-        ) * 13
+        ) * 14
     )
 
     over25 = limit_score(
-        39 + over25_raw * 0.52
+        36 + over25_raw * 0.55
     )
 
+    # -----------------------------------------------------
+    # 3.5 ÜST
+    # -----------------------------------------------------
+
+    over35_raw = (
+        home["over35"] * 32 +
+        away["over35"] * 32 +
+        home["over25"] * 10 +
+        away["over25"] * 10 +
+        min(
+            (home["goal_avg"] + away["goal_avg"]) / 7,
+            1
+        ) * 16
+    )
+
+    over35 = limit_score(
+        33 + over35_raw * 0.56
+    )
+
+    # -----------------------------------------------------
     # KG VAR
+    # -----------------------------------------------------
+
     btts_raw = (
-        home["btts"] * 27 +
-        away["btts"] * 27 +
-        home["scored_rate"] * 12 +
-        away["scored_rate"] * 12 +
-        home["conceded_rate"] * 11 +
-        away["conceded_rate"] * 11
+        home["btts"] * 28 +
+        away["btts"] * 28 +
+        home["scored_rate"] * 10 +
+        away["scored_rate"] * 10 +
+        home["conceded_rate"] * 12 +
+        away["conceded_rate"] * 12
     )
 
     btts = limit_score(
-        39 + btts_raw * 0.52
+        35 + btts_raw * 0.55
     )
 
+    # -----------------------------------------------------
+    # MS 1
+    # -----------------------------------------------------
+
+    ms1_raw = (
+        home["win_rate"] * 38 +
+        away["loss_rate"] * 30 +
+        home["scored_rate"] * 10 +
+        away["conceded_rate"] * 10 +
+        max(
+            home["gf_avg"] - away["gf_avg"],
+            0
+        ) * 6
+    )
+
+    ms1 = limit_score(
+        34 + ms1_raw * 0.55
+    )
+
+    # -----------------------------------------------------
+    # MS 2
+    # -----------------------------------------------------
+
+    ms2_raw = (
+        away["win_rate"] * 38 +
+        home["loss_rate"] * 30 +
+        away["scored_rate"] * 10 +
+        home["conceded_rate"] * 10 +
+        max(
+            away["gf_avg"] - home["gf_avg"],
+            0
+        ) * 6
+    )
+
+    ms2 = limit_score(
+        34 + ms2_raw * 0.55
+    )
+
+    # -----------------------------------------------------
     # 1X
-    home_double_raw = (
-        home["win_rate"] * 32 +
+    # -----------------------------------------------------
+
+    one_x_raw = (
+        home["win_rate"] * 30 +
         home["draw_rate"] * 20 +
-        away["loss_rate"] * 28 +
-        (1 - away["win_rate"]) * 20
+        away["loss_rate"] * 25 +
+        (1 - away["win_rate"]) * 25
     )
 
-    home_double = limit_score(
-        41 + home_double_raw * 0.50
+    one_x = limit_score(
+        40 + one_x_raw * 0.50
     )
 
+    # -----------------------------------------------------
     # X2
-    away_double_raw = (
-        away["win_rate"] * 32 +
+    # -----------------------------------------------------
+
+    x_two_raw = (
+        away["win_rate"] * 30 +
         away["draw_rate"] * 20 +
-        home["loss_rate"] * 28 +
-        (1 - home["win_rate"]) * 20
+        home["loss_rate"] * 25 +
+        (1 - home["win_rate"]) * 25
     )
 
-    away_double = limit_score(
-        41 + away_double_raw * 0.50
+    x_two = limit_score(
+        40 + x_two_raw * 0.50
     )
 
     markets = {
-        "1.5 Üst": over15,
         "2.5 Üst": over25,
+        "3.5 Üst": over35,
         "KG Var": btts,
-        "1X": home_double,
-        "X2": away_double
+        "MS 1": ms1,
+        "MS 2": ms2,
+        "1X": one_x,
+        "X2": x_two,
     }
 
+    # =====================================================
+    # EŞİĞİ GEÇMEYEN MARKETLERİ AT
+    # =====================================================
+
+    qualified = {}
+
+    for market, score in markets.items():
+
+        minimum = MARKET_LIMITS[market]
+
+        if score >= minimum:
+            qualified[market] = score
+
+    if not qualified:
+        return None
+
     sorted_markets = sorted(
-        markets.items(),
+        qualified.items(),
         key=lambda x: x[1],
         reverse=True
     )
 
+    best_market = sorted_markets[0]
+
+    if len(sorted_markets) >= 2:
+        second_market = sorted_markets[1]
+    else:
+        second_market = ("-", 0)
+
     return {
-        "market": sorted_markets[0][0],
-        "score": sorted_markets[0][1],
-        "second_market": sorted_markets[1][0],
-        "second_score": sorted_markets[1][1],
-        "markets": markets
+        "market": best_market[0],
+        "score": best_market[1],
+
+        "second_market": second_market[0],
+        "second_score": second_market[1],
+
+        "markets": markets,
+        "qualified": qualified
     }
 
 # =========================================================
-# SAAT
+# TÜRKİYE SAATİ
 # =========================================================
 
 def turkey_time(api_date):
@@ -511,6 +563,13 @@ with st.expander("🌍 Taranan 40 ligi göster"):
             f"{league_name} • ID {league_id}"
         )
 
+with st.expander("🎯 Kullanılan marketleri göster"):
+
+    for market, minimum in MARKET_LIMITS.items():
+        st.write(
+            f"{market} • minimum {minimum}/100"
+        )
+
 scan = st.button("🔍 GÜNÜ TARA")
 
 # =========================================================
@@ -524,12 +583,8 @@ if scan:
         result = api_get(
             "/fixtures",
             {
-                "date":
-                    selected_date.strftime(
-                        "%Y-%m-%d"
-                    ),
-                "timezone":
-                    "Europe/Istanbul"
+                "date": selected_date.strftime("%Y-%m-%d"),
+                "timezone": "Europe/Istanbul"
             },
             api_key
         )
@@ -616,7 +671,6 @@ if scan:
     analysed = []
 
     progress = st.progress(0)
-
     status_text = st.empty()
 
     total = len(fixtures)
@@ -650,11 +704,8 @@ if scan:
         if analysis:
 
             analysed.append({
-                "home":
-                    home["name"],
-
-                "away":
-                    away["name"],
+                "home": home["name"],
+                "away": away["name"],
 
                 "league":
                     LEAGUES.get(
@@ -682,6 +733,9 @@ if scan:
                 "markets":
                     analysis["markets"],
 
+                "qualified":
+                    analysis["qualified"],
+
                 "home_form":
                     home_form,
 
@@ -696,10 +750,14 @@ if scan:
     progress.empty()
     status_text.empty()
 
+    # =====================================================
+    # SONUÇ
+    # =====================================================
+
     if not analysed:
 
         st.warning(
-            "Maçlar bulundu ama analiz için yeterli geçmiş veri yok."
+            "Bugün minimum eşikleri geçen maç çıkmadı."
         )
 
         st.stop()
@@ -711,65 +769,81 @@ if scan:
 
     top10 = analysed[:10]
 
+    st.metric(
+        "✅ Eşiği geçen maç",
+        len(analysed)
+    )
+
     # =====================================================
     # TOP 10
     # =====================================================
 
-    st.markdown("## 🏆 Günün En İyi 10 Seçimi")
+    st.markdown(
+        "## 🏆 Günün En İyi 10 Seçimi"
+    )
 
     for rank, match in enumerate(top10, 1):
 
         score = match["score"]
 
-        if score >= 86:
+        if score >= 88:
             icon = "🔥"
             grade = "ÇOK GÜÇLÜ"
 
-        elif score >= 80:
+        elif score >= 82:
             icon = "🟢"
             grade = "GÜÇLÜ"
 
-        elif score >= 74:
+        elif score >= 76:
             icon = "🟡"
             grade = "İYİ"
 
-        elif score >= 68:
-            icon = "🟠"
-            grade = "ORTA"
-
         else:
-            icon = "🔴"
-            grade = "RİSKLİ"
+            icon = "🟠"
+            grade = "SINIRDA"
 
         with st.container(border=True):
 
             st.caption(
-                f"#{rank} • {match['time']} • {match['league']}"
+                f"#{rank} • "
+                f"{match['time']} • "
+                f"{match['league']}"
             )
 
             st.markdown(
                 f"### {match['home']} - {match['away']}"
             )
 
-            col1, col2 = st.columns([2, 1])
+            c1, c2 = st.columns([2, 1])
 
-            with col1:
+            with c1:
+
                 st.markdown(
-                    f"### {icon} **{match['market']}**"
+                    f"### {icon} {match['market']}"
                 )
 
                 st.caption(
-                    f"{grade} • "
-                    f"2. seçenek: "
-                    f"{match['second_market']} "
-                    f"{match['second_score']}/100"
+                    grade
                 )
 
-            with col2:
+                if match["second_market"] != "-":
+
+                    st.caption(
+                        f"2. seçenek: "
+                        f"{match['second_market']} "
+                        f"{match['second_score']}/100"
+                    )
+
+            with c2:
+
                 st.metric(
                     "KuponLab",
                     f"{score}/100"
                 )
+
+        # =================================================
+        # DETAY
+        # =================================================
 
         with st.expander(
             f"📊 #{rank} detaylı analiz"
@@ -787,18 +861,13 @@ if scan:
                 )
 
                 st.write(
-                    f"Attığı gol ort.: "
+                    f"Attığı gol: "
                     f"**{home_form['gf_avg']:.2f}**"
                 )
 
                 st.write(
-                    f"Yediği gol ort.: "
+                    f"Yediği gol: "
                     f"**{home_form['ga_avg']:.2f}**"
-                )
-
-                st.write(
-                    f"1.5 Üst: "
-                    f"**%{home_form['over15'] * 100:.0f}**"
                 )
 
                 st.write(
@@ -807,8 +876,18 @@ if scan:
                 )
 
                 st.write(
+                    f"3.5 Üst: "
+                    f"**%{home_form['over35'] * 100:.0f}**"
+                )
+
+                st.write(
                     f"KG Var: "
                     f"**%{home_form['btts'] * 100:.0f}**"
+                )
+
+                st.write(
+                    f"Galibiyet: "
+                    f"**%{home_form['win_rate'] * 100:.0f}**"
                 )
 
             with c2:
@@ -818,18 +897,13 @@ if scan:
                 )
 
                 st.write(
-                    f"Attığı gol ort.: "
+                    f"Attığı gol: "
                     f"**{away_form['gf_avg']:.2f}**"
                 )
 
                 st.write(
-                    f"Yediği gol ort.: "
+                    f"Yediği gol: "
                     f"**{away_form['ga_avg']:.2f}**"
-                )
-
-                st.write(
-                    f"1.5 Üst: "
-                    f"**%{away_form['over15'] * 100:.0f}**"
                 )
 
                 st.write(
@@ -838,13 +912,25 @@ if scan:
                 )
 
                 st.write(
+                    f"3.5 Üst: "
+                    f"**%{away_form['over35'] * 100:.0f}**"
+                )
+
+                st.write(
                     f"KG Var: "
                     f"**%{away_form['btts'] * 100:.0f}**"
                 )
 
+                st.write(
+                    f"Galibiyet: "
+                    f"**%{away_form['win_rate'] * 100:.0f}**"
+                )
+
             st.divider()
 
-            st.markdown("#### 🎯 Tüm market skorları")
+            st.markdown(
+                "#### 🎯 Tüm market skorları"
+            )
 
             sorted_scores = sorted(
                 match["markets"].items(),
@@ -854,42 +940,54 @@ if scan:
 
             for market, market_score in sorted_scores:
 
+                minimum = MARKET_LIMITS[market]
+
+                if market_score >= minimum:
+                    sign = "✅"
+                else:
+                    sign = "❌"
+
                 st.write(
-                    f"**{market}:** "
-                    f"{market_score}/100"
+                    f"{sign} **{market}:** "
+                    f"{market_score}/100 "
+                    f"• eşik {minimum}"
                 )
 
     # =====================================================
     # KUPONLAR
     # =====================================================
 
-    st.markdown("## 🎟️ KuponLab Kuponları")
+    st.markdown(
+        "## 🎟️ KuponLab Kuponları"
+    )
 
     strong = [
         x for x in analysed
-        if x["score"] >= 82
+        if x["score"] >= 84
     ][:3]
 
     main_coupon = [
         x for x in analysed
-        if x["score"] >= 75
+        if x["score"] >= 78
     ][:5]
 
     bomb = [
         x for x in analysed
-        if x["score"] >= 68
+        if x["score"] >= 72
     ][:7]
 
     def show_coupon(title, matches):
 
         with st.container(border=True):
 
-            st.markdown(f"### {title}")
+            st.markdown(
+                f"### {title}"
+            )
 
             if not matches:
 
                 st.caption(
-                    "Bu kupon için yeterli güçlü seçim çıkmadı."
+                    "Yeterli güçlü seçim çıkmadı."
                 )
 
                 return
@@ -897,14 +995,15 @@ if scan:
             for item in matches:
 
                 st.markdown(
-                    f"**{item['home']} - {item['away']}**"
+                    f"**{item['home']} - "
+                    f"{item['away']}**"
                 )
 
                 c1, c2 = st.columns([3, 1])
 
                 with c1:
                     st.write(
-                        f"🟢 {item['market']}"
+                        f"🎯 {item['market']}"
                     )
 
                 with c2:
@@ -930,7 +1029,8 @@ if scan:
     )
 
     st.caption(
-        "KuponLab V3 • 40 seçili lig • "
-        "Son 5 maç verisi • "
-        "Puanlar istatistiksel sinyaldir, garanti değildir."
+        "KuponLab V4 • 40 seçili lig • "
+        "7 bahis marketi • "
+        "minimum market eşikleri aktif • "
+        "son 5 maç form analizi."
     )

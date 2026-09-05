@@ -7,7 +7,6 @@ export default {
       "Content-Type": "application/json; charset=UTF-8",
     };
 
-    // CORS
     if (request.method === "OPTIONS") {
       return new Response(null, {
         status: 204,
@@ -15,37 +14,101 @@ export default {
       });
     }
 
-    try {
-      const url = new URL(request.url);
+    const url = new URL(request.url);
 
-      // Sağlık kontrolü
-      if (url.pathname === "/" || url.pathname === "") {
+    // ANA SAYFA
+    if (url.pathname === "/" || url.pathname === "") {
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          app: "KuponLab API",
+          message: "API çalışıyor ⚽",
+        }),
+        {
+          status: 200,
+          headers: corsHeaders,
+        }
+      );
+    }
+
+    // API-FOOTBALL TEST
+    if (url.pathname === "/test") {
+      try {
+        if (!env.API_FOOTBALL_KEY) {
+          return new Response(
+            JSON.stringify({
+              ok: false,
+              error: "API_FOOTBALL_KEY bulunamadı",
+            }),
+            {
+              status: 500,
+              headers: corsHeaders,
+            }
+          );
+        }
+
+        const response = await fetch(
+          "https://v3.football.api-sports.io/status",
+          {
+            method: "GET",
+            headers: {
+              "x-apisports-key": env.API_FOOTBALL_KEY,
+            },
+          }
+        );
+
+        const data = await response.json();
+
         return new Response(
           JSON.stringify({
-            ok: true,
-            app: "KuponLab API",
-            message: "API çalışıyor ⚽",
+            ok: response.ok,
+            status: response.status,
+            apiFootball: data,
           }),
           {
-            status: 200,
+            status: response.status,
+            headers: corsHeaders,
+          }
+        );
+      } catch (error) {
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            error: "API-Football bağlantı hatası",
+            message: error.message,
+          }),
+          {
+            status: 500,
             headers: corsHeaders,
           }
         );
       }
+    }
 
-      // MAÇLARI GETİR
-      // Örnek:
-      // /matches?date=2026-09-06
-      if (url.pathname === "/matches") {
-        const date =
-          url.searchParams.get("date") ||
-          new Date().toISOString().slice(0, 10);
+    // MAÇLARI GETİR
+    if (url.pathname === "/matches") {
+      try {
+        const date = url.searchParams.get("date");
+
+        if (!date) {
+          return new Response(
+            JSON.stringify({
+              ok: false,
+              error: "Tarih eksik",
+              example: "/matches?date=2026-09-06",
+            }),
+            {
+              status: 400,
+              headers: corsHeaders,
+            }
+          );
+        }
 
         if (!env.API_FOOTBALL_KEY) {
           return new Response(
             JSON.stringify({
               ok: false,
-              error: "API_FOOTBALL_KEY bulunamadı.",
+              error: "API_FOOTBALL_KEY bulunamadı",
             }),
             {
               status: 500,
@@ -58,61 +121,63 @@ export default {
           "https://v3.football.api-sports.io/fixtures?date=" +
           encodeURIComponent(date);
 
-        const apiResponse = await fetch(apiUrl, {
+        const response = await fetch(apiUrl, {
           method: "GET",
           headers: {
             "x-apisports-key": env.API_FOOTBALL_KEY,
           },
         });
 
-        const data = await apiResponse.json();
+        const data = await response.json();
 
-        if (!apiResponse.ok) {
+        if (!response.ok) {
           return new Response(
             JSON.stringify({
               ok: false,
-              error: "API-Football isteği başarısız.",
-              status: apiResponse.status,
+              error: "API-Football hata döndürdü",
+              status: response.status,
               details: data,
             }),
             {
-              status: apiResponse.status,
+              status: response.status,
               headers: corsHeaders,
             }
           );
         }
 
-        const matches = (data.response || []).map((item) => ({
-          fixture_id: item.fixture?.id ?? null,
+        const fixtures = Array.isArray(data.response)
+          ? data.response
+          : [];
 
+        const matches = fixtures.map((item) => ({
+          fixture_id: item.fixture?.id ?? null,
           date: item.fixture?.date ?? null,
           timestamp: item.fixture?.timestamp ?? null,
 
-          status: {
-            long: item.fixture?.status?.long ?? null,
-            short: item.fixture?.status?.short ?? null,
-            elapsed: item.fixture?.status?.elapsed ?? null,
-          },
-
           league: {
             id: item.league?.id ?? null,
-            name: item.league?.name ?? null,
-            country: item.league?.country ?? null,
-            logo: item.league?.logo ?? null,
+            name: item.league?.name ?? "",
+            country: item.league?.country ?? "",
+            logo: item.league?.logo ?? "",
             season: item.league?.season ?? null,
-            round: item.league?.round ?? null,
+            round: item.league?.round ?? "",
           },
 
           home: {
             id: item.teams?.home?.id ?? null,
-            name: item.teams?.home?.name ?? null,
-            logo: item.teams?.home?.logo ?? null,
+            name: item.teams?.home?.name ?? "",
+            logo: item.teams?.home?.logo ?? "",
           },
 
           away: {
             id: item.teams?.away?.id ?? null,
-            name: item.teams?.away?.name ?? null,
-            logo: item.teams?.away?.logo ?? null,
+            name: item.teams?.away?.name ?? "",
+            logo: item.teams?.away?.logo ?? "",
+          },
+
+          status: {
+            long: item.fixture?.status?.long ?? "",
+            short: item.fixture?.status?.short ?? "",
           },
 
           goals: {
@@ -124,41 +189,47 @@ export default {
         return new Response(
           JSON.stringify({
             ok: true,
-            date,
+            date: date,
             count: matches.length,
-            matches,
+            api_results: data.results ?? 0,
+            errors: data.errors ?? {},
+            matches: matches,
           }),
           {
             status: 200,
             headers: corsHeaders,
           }
         );
+      } catch (error) {
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            error: "Maçlar alınamadı",
+            message: error.message,
+          }),
+          {
+            status: 500,
+            headers: corsHeaders,
+          }
+        );
       }
-
-      // Bilinmeyen adres
-      return new Response(
-        JSON.stringify({
-          ok: false,
-          error: "Endpoint bulunamadı.",
-        }),
-        {
-          status: 404,
-          headers: corsHeaders,
-        }
-      );
-    } catch (error) {
-      return new Response(
-        JSON.stringify({
-          ok: false,
-          error: "Sunucu hatası.",
-          message: error.message,
-        }),
-        {
-          status: 500,
-          headers: corsHeaders,
-        }
-      );
     }
+
+    // BULUNAMAYAN ADRES
+    return new Response(
+      JSON.stringify({
+        ok: false,
+        error: "Endpoint bulunamadı",
+        endpoints: [
+          "/",
+          "/test",
+          "/matches?date=2026-09-06",
+        ],
+      }),
+      {
+        status: 404,
+        headers: corsHeaders,
+      }
+    );
   },
 };
-// deploy

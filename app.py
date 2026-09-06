@@ -1142,10 +1142,9 @@ def get_fixture_odds(fixture_id, api_key):
 
 def choose_market_with_odds(analysis, odds):
     """
-    Oran artık eleme kriteri değildir.
-    Analiz eşiğini geçen marketler kalır.
-    1.35-2.00 aralığında oranı olan seçimler sıralamada bonus alır.
-    Oran yoksa da güçlü analiz çöpe atılmaz.
+    Oran sadece bilgi amaçlı gösterilir.
+    Maç seçimini ve sıralamayı KuponLab analiz skoru belirler.
+    Düşük/yüksek oran nedeniyle hiçbir güçlü analiz elenmez.
     """
     candidates = []
 
@@ -1155,24 +1154,15 @@ def choose_market_with_odds(analysis, odds):
 
         odd = odds.get(market)
 
-        # Temel değer analiz skorudur.
-        value_score = float(score)
-
-        # Oynanabilir oran aralığındaysa bonus ver.
-        if odd is not None and MIN_ODD <= odd <= MAX_ODD:
-            value_score += 5
-            value_score += min(max(odd - MIN_ODD, 0) * 4, 2)
-
-        # 1.35 altı oranı tamamen silme, sadece bonus verme.
-        # 2.00 üstü oranı da analiz güçlüyse listede tut.
         candidates.append(
-            (market, score, odd, value_score)
+            (market, score, odd)
         )
 
     if not candidates:
         return None
 
-    candidates.sort(key=lambda x: (x[3], x[1]), reverse=True)
+    candidates.sort(key=lambda x: x[1], reverse=True)
+
     best = candidates[0]
     second = candidates[1] if len(candidates) > 1 else None
 
@@ -1180,7 +1170,7 @@ def choose_market_with_odds(analysis, odds):
         "market": best[0],
         "score": best[1],
         "odd": best[2],
-        "value_score": best[3],
+        "value_score": best[1],
         "second_market": second[0] if second else "-",
         "second_score": second[1] if second else 0,
         "second_odd": second[2] if second else None,
@@ -1573,7 +1563,7 @@ if scan:
 
     analysed.sort(
         key=lambda x:
-            x.get("value_score", x["score"]),
+            x["score"],
         reverse=True
     )
 
@@ -1666,17 +1656,9 @@ if scan:
                     f"{match['market']} • {odd_text}"
                 )
 
-                if (
-                    match.get("odd") is not None
-                    and MIN_ODD <= match["odd"] <= MAX_ODD
-                ):
-                    st.caption(
-                        f"{grade} • 🎯 Oynanabilir oran"
-                    )
-                else:
-                    st.caption(
-                        f"{grade} • Analiz güçlü, oran bonusu yok"
-                    )
+                st.caption(
+                    f"{grade} • Oran sadece bilgi amaçlı"
+                )
 
                 if (
                     match[

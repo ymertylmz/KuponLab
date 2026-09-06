@@ -1,15 +1,21 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import requests
+import base64
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 from PIL import Image
 
 # =========================================================
-# KUPONLAB V7
+# KUPONLAB V8
 # =========================================================
 
-# LOGOYU FAVICON OLARAK DA KULLAN
+API_BASE = "https://v3.football.api-sports.io"
+
+# =========================================================
+# LOGO / SAYFA AYARLARI
+# =========================================================
+
 try:
     page_icon = Image.open("kuponlab_logo.png")
 except Exception:
@@ -22,75 +28,97 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-API_BASE = "https://v3.football.api-sports.io"
-
 # =========================================================
-# iPHONE / ANA EKRAN ADI
+# iPHONE ANA EKRAN ADI + ICON
 # =========================================================
 
-components.html(
-    """
-    <script>
-    try {
-        const doc = window.parent.document;
+try:
+    with open("kuponlab_logo.png", "rb") as f:
+        logo_base64 = base64.b64encode(f.read()).decode("utf-8")
 
-        doc.title = "KuponLab";
+    components.html(
+        f"""
+        <script>
+        try {{
+            const doc = window.parent.document;
 
-        let appleTitle =
-            doc.querySelector('meta[name="apple-mobile-web-app-title"]');
+            doc.title = "KuponLab";
 
-        if (!appleTitle) {
-            appleTitle = doc.createElement("meta");
-            appleTitle.name = "apple-mobile-web-app-title";
-            doc.head.appendChild(appleTitle);
-        }
+            let appleTitle =
+                doc.querySelector('meta[name="apple-mobile-web-app-title"]');
 
-        appleTitle.content = "KuponLab";
+            if (!appleTitle) {{
+                appleTitle = doc.createElement("meta");
+                appleTitle.name = "apple-mobile-web-app-title";
+                doc.head.appendChild(appleTitle);
+            }}
 
-        let capable =
-            doc.querySelector('meta[name="apple-mobile-web-app-capable"]');
+            appleTitle.content = "KuponLab";
 
-        if (!capable) {
-            capable = doc.createElement("meta");
-            capable.name = "apple-mobile-web-app-capable";
-            doc.head.appendChild(capable);
-        }
+            let capable =
+                doc.querySelector('meta[name="apple-mobile-web-app-capable"]');
 
-        capable.content = "yes";
+            if (!capable) {{
+                capable = doc.createElement("meta");
+                capable.name = "apple-mobile-web-app-capable";
+                doc.head.appendChild(capable);
+            }}
 
-        let status =
-            doc.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+            capable.content = "yes";
 
-        if (!status) {
-            status = doc.createElement("meta");
-            status.name = "apple-mobile-web-app-status-bar-style";
-            doc.head.appendChild(status);
-        }
+            let status =
+                doc.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
 
-        status.content = "black-translucent";
+            if (!status) {{
+                status = doc.createElement("meta");
+                status.name = "apple-mobile-web-app-status-bar-style";
+                doc.head.appendChild(status);
+            }}
 
-        let theme =
-            doc.querySelector('meta[name="theme-color"]');
+            status.content = "black-translucent";
 
-        if (!theme) {
-            theme = doc.createElement("meta");
-            theme.name = "theme-color";
-            doc.head.appendChild(theme);
-        }
+            let theme =
+                doc.querySelector('meta[name="theme-color"]');
 
-        theme.content = "#07111f";
+            if (!theme) {{
+                theme = doc.createElement("meta");
+                theme.name = "theme-color";
+                doc.head.appendChild(theme);
+            }}
 
-    } catch(e) {}
-    </script>
-    """,
-    height=0
-)
+            theme.content = "#07111f";
+
+            doc.querySelectorAll(
+                'link[rel="apple-touch-icon"]'
+            ).forEach(el => el.remove());
+
+            const appleIcon = doc.createElement("link");
+            appleIcon.rel = "apple-touch-icon";
+            appleIcon.sizes = "180x180";
+            appleIcon.href = "data:image/png;base64,{logo_base64}";
+            doc.head.appendChild(appleIcon);
+
+            doc.querySelectorAll(
+                'link[rel="icon"], link[rel="shortcut icon"]'
+            ).forEach(el => {{
+                el.href = "data:image/png;base64,{logo_base64}";
+            }});
+
+        }} catch(e) {{}}
+        </script>
+        """,
+        height=0
+    )
+
+except Exception:
+    pass
 
 # =========================================================
 # 40 LİG
 # =========================================================
 
 LEAGUES = {
+
     140: "🇪🇸 İspanya - La Liga",
     39: "🏴 İngiltere - Premier League",
     40: "🏴 İngiltere - Championship",
@@ -142,14 +170,12 @@ LEAGUES = {
 
     207: "🇨🇭 İsviçre - Super League",
 
-    # EK 5
     141: "🇪🇸 İspanya - La Liga 2",
     197: "🇬🇷 Yunanistan - Super League 1",
     169: "🇨🇳 Çin - Super League",
     253: "🇺🇸 ABD - MLS",
     43: "🏴 İngiltere - National League",
 
-    # UEFA
     2: "🏆 UEFA Şampiyonlar Ligi",
     3: "🏆 UEFA Avrupa Ligi",
     848: "🏆 UEFA Konferans Ligi",
@@ -179,8 +205,6 @@ st.markdown(
     """
 <style>
 
-/* ARKA PLAN */
-
 .stApp {
     background:
         radial-gradient(
@@ -195,15 +219,11 @@ st.markdown(
         );
 }
 
-/* ANA SAYFA */
-
 .block-container {
     max-width: 780px;
-    padding-top: 4.5rem;
+    padding-top: 4.8rem;
     padding-bottom: 5rem;
 }
-
-/* STREAMLIT ÜST BUTONLARINI TEMİZLE */
 
 #MainMenu {
     visibility: hidden;
@@ -212,8 +232,6 @@ st.markdown(
 footer {
     visibility: hidden;
 }
-
-/* METİNLER */
 
 h1,
 h2,
@@ -227,22 +245,16 @@ label {
     color: #dce5ee;
 }
 
-/* EXPANDER */
-
 [data-testid="stExpander"] {
     background: #0d1928;
     border: 1px solid #1d344b;
     border-radius: 16px;
 }
 
-/* KART */
-
 [data-testid="stVerticalBlockBorderWrapper"] {
     background: #0d1928;
     border-radius: 18px;
 }
-
-/* METRIC */
 
 [data-testid="stMetric"] {
     background: #0d1928;
@@ -251,13 +263,9 @@ label {
     padding: 12px;
 }
 
-/* TARİH */
-
 [data-testid="stDateInput"] input {
     border-radius: 14px;
 }
-
-/* BUTON */
 
 div.stButton > button {
 
@@ -283,7 +291,8 @@ div.stButton > button {
     font-weight: 900;
 
     box-shadow:
-        0 8px 28px rgba(56,224,120,.20);
+        0 8px 28px
+        rgba(56,224,120,.20);
 }
 
 div.stButton > button:hover {
@@ -294,23 +303,6 @@ div.stButton > button:hover {
 
     border: none;
 }
-
-/* LOGO ALANI */
-
-.logo-shell {
-
-    width: 100%;
-
-    display: flex;
-
-    align-items: center;
-
-    justify-content: center;
-
-    margin-bottom: 18px;
-}
-
-/* YEŞİL ÇİZGİ */
 
 .green-line {
 
@@ -330,8 +322,6 @@ div.stButton > button:hover {
         0 0 12px
         rgba(56,224,120,.5);
 }
-
-/* 3 ÖZELLİK KARTI */
 
 .feature-wrap {
 
@@ -395,13 +385,11 @@ div.stButton > button:hover {
     line-height: 1.3;
 }
 
-/* TELEFON */
-
 @media (max-width:600px) {
 
     .block-container {
 
-        padding-top: 4.7rem;
+        padding-top: 4.8rem;
 
         padding-left: 1rem;
 
@@ -425,7 +413,6 @@ try:
         "kuponlab_logo.png"
     )
 
-    # Görselde altta gereksiz zemini biraz kes
     width, height = logo.size
 
     crop_bottom = int(
@@ -802,10 +789,6 @@ def analyse_match(
     if not home or not away:
         return None
 
-    # -----------------------------------------------------
-    # 2.5 ÜST
-    # -----------------------------------------------------
-
     over25_raw = (
 
         home["over25"] * 28
@@ -836,10 +819,6 @@ def analyse_match(
         over25_raw * .55
     )
 
-    # -----------------------------------------------------
-    # 3.5 ÜST
-    # -----------------------------------------------------
-
     over35_raw = (
 
         home["over35"] * 32
@@ -866,10 +845,6 @@ def analyse_match(
         over35_raw * .56
     )
 
-    # -----------------------------------------------------
-    # KG VAR
-    # -----------------------------------------------------
-
     btts_raw = (
 
         home["btts"] * 28
@@ -890,10 +865,6 @@ def analyse_match(
         +
         btts_raw * .55
     )
-
-    # -----------------------------------------------------
-    # MS1
-    # -----------------------------------------------------
 
     ms1_raw = (
 
@@ -919,10 +890,6 @@ def analyse_match(
         ms1_raw * .55
     )
 
-    # -----------------------------------------------------
-    # MS2
-    # -----------------------------------------------------
-
     ms2_raw = (
 
         away["win_rate"] * 38
@@ -947,10 +914,6 @@ def analyse_match(
         ms2_raw * .55
     )
 
-    # -----------------------------------------------------
-    # 1X
-    # -----------------------------------------------------
-
     one_x_raw = (
 
         home["win_rate"] * 30
@@ -971,10 +934,6 @@ def analyse_match(
         +
         one_x_raw * .50
     )
-
-    # -----------------------------------------------------
-    # X2
-    # -----------------------------------------------------
 
     x_two_raw = (
 
@@ -1268,10 +1227,6 @@ if scan:
             fixture
         )
 
-    # =====================================================
-    # ÖZET
-    # =====================================================
-
     c1, c2 = st.columns(
         2
     )
@@ -1301,10 +1256,6 @@ if scan:
         )
 
         st.stop()
-
-    # =====================================================
-    # ANALİZ
-    # =====================================================
 
     analysed = []
 
@@ -1554,10 +1505,6 @@ if scan:
                     f"{score}/100"
                 )
 
-        # =================================================
-        # DETAY
-        # =================================================
-
         with st.expander(
             f"📊 #{rank} detaylı analiz"
         ):
@@ -1801,7 +1748,7 @@ if scan:
     )
 
     st.caption(
-        "KuponLab V7 • "
+        "KuponLab V8 • "
         "40 seçili lig • "
         "API key otomatik • "
         "7 bahis marketi • "

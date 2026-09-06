@@ -2,6 +2,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 import requests
 import base64
+import statistics
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 from PIL import Image
@@ -196,6 +197,10 @@ MARKET_LIMITS = {
     "1X": 76,
     "X2": 76,
 }
+
+# KuponLab oran filtresi
+MIN_ODD = 1.35
+MAX_ODD = 2.00
 
 # =========================================================
 # TASARIM
@@ -1050,6 +1055,137 @@ def analyse_match(
     }
 
 # =========================================================
+# MAÇ ÖNCESİ ORANLAR
+# =========================================================
+
+@st.cache_data(ttl=10800, show_spinner=False)
+def get_fixture_odds(fixture_id, api_key):
+    """
+    API-Football /odds verisini okur.
+    Aynı market için birden fazla bookmaker varsa medyan oranı kullanır.
+    """
+    result = api_get(
+        "/odds",
+        {"fixture": fixture_id},
+        api_key
+    )
+
+    if not result["ok"] or result["data"].get("errors"):
+        return {}
+
+    rows = result["data"].get("response", [])
+    collected = {
+        "2.5 Üst": [],
+        "3.5 Üst": [],
+        "KG Var": [],
+        "MS 1": [],
+        "MS 2": [],
+        "1X": [],
+        "X2": [],
+    }
+
+    for row in rows:
+        for bookmaker in row.get("bookmakers", []):
+            for bet in bookmaker.get("bets", []):
+                bet_name = str(bet.get("name", "")).strip().lower()
+
+                for item in bet.get("values", []):
+                    value = str(item.get("value", "")).strip().lower()
+
+                    try:
+                        odd = float(item.get("odd"))
+                    except (TypeError, ValueError):
+                        continue
+
+                    market = None
+
+                    if bet_name in ("match winner", "1x2"):
+                        if value in ("home", "1"):
+                            market = "MS 1"
+                        elif value in ("away", "2"):
+                            market = "MS 2"
+
+                    elif (
+                        "over/under" in bet_name
+                        or "goals over" in bet_name
+                        or bet_name in ("goals", "total goals")
+                    ):
+                        if value in ("over 2.5", "over 2,5"):
+                            market = "2.5 Üst"
+                        elif value in ("over 3.5", "over 3,5"):
+                            market = "3.5 Üst"
+
+                    elif (
+                        "both teams" in bet_name
+                        or "both team" in bet_name
+                        or "btts" in bet_name
+                    ):
+                        if value in ("yes", "evet"):
+                            market = "KG Var"
+
+                    elif "double chance" in bet_name:
+                        if value in ("home/draw", "1x", "home or draw"):
+                            market = "1X"
+                        elif value in ("draw/away", "x2", "draw or away"):
+                            market = "X2"
+
+                    if market:
+                        collected[market].append(odd)
+
+    odds = {}
+    for market, values in collected.items():
+        if values:
+            odds[market] = round(statistics.median(values), 2)
+
+    return odds
+
+
+def choose_market_with_odds(analysis, odds):
+    """
+    Yalnızca hem KuponLab eşiğini geçen hem de 1.35-2.00 oran aralığında
+    bulunan marketleri değerlendirir. Skor + oran değeriyle en iyiyi seçer.
+    """
+    candidates = []
+
+    for market, score in analysis["markets"].items():
+        odd = odds.get(market)
+
+        if odd is None:
+            continue
+
+        if score < MARKET_LIMITS[market]:
+            continue
+
+        if not (MIN_ODD <= odd <= MAX_ODD):
+            continue
+
+        # Oran yükseldikçe küçük bir değer bonusu ver.
+        # Böylece 1.08'lik "çok güvenli" seçimler değil, oynanabilir oranlar öne çıkar.
+        value_score = score + min(max(odd - MIN_ODD, 0) * 12, 6)
+
+        candidates.append(
+            (market, score, odd, value_score)
+        )
+
+    if not candidates:
+        return None
+
+    candidates.sort(key=lambda x: (x[3], x[1]), reverse=True)
+    best = candidates[0]
+    second = candidates[1] if len(candidates) > 1 else None
+
+    return {
+        "market": best[0],
+        "score": best[1],
+        "odd": best[2],
+        "value_score": best[3],
+        "second_market": second[0] if second else "-",
+        "second_score": second[1] if second else 0,
+        "second_odd": second[2] if second else None,
+    }
+
+
+# =========================================================
 # TÜRKİYE SAATİ
 # =========================================================
 
@@ -1343,63 +1479,76 @@ if scan:
         )
 
         if analysis:
-
-            analysed.append(
-                {
-
-                    "home":
-                        home["name"],
-
-                    "away":
-                        away["name"],
-
-                    "league":
-                        LEAGUES.get(
-                            league["id"],
-                            league["name"]
-                        ),
-
-                    "time":
-                        turkey_time(
-                            fixture[
-                                "fixture"
-                            ][
-                                "date"
-                            ]
-                        ),
-
-                    "market":
-                        analysis[
-                            "market"
-                        ],
-
-                    "score":
-                        analysis[
-                            "score"
-                        ],
-
-                    "second_market":
-                        analysis[
-                            "second_market"
-                        ],
-
-                    "second_score":
-                        analysis[
-                            "second_score"
-                        ],
-
-                    "markets":
-                        analysis[
-                            "markets"
-                        ],
-
-                    "home_form":
-                        home_form,
-
-                    "away_form":
-                        away_form
-                }
+            fixture_odds = get_fixture_odds(
+                fixture["fixture"]["id"],
+                api_key
             )
+
+            selected = choose_market_with_odds(
+                analysis,
+                fixture_odds
+            )
+
+            # Oranı bulunmayan veya 1.35-2.00 dışında kalan maç kupona girmez.
+            if selected:
+                analysed.append(
+                    {
+
+                        "home":
+                            home["name"],
+
+                        "away":
+                            away["name"],
+
+                        "league":
+                            LEAGUES.get(
+                                league["id"],
+                                league["name"]
+                            ),
+
+                        "time":
+                            turkey_time(
+                                fixture[
+                                    "fixture"
+                                ][
+                                    "date"
+                                ]
+                            ),
+
+                        "market":
+                            selected["market"],
+
+                        "score":
+                            selected["score"],
+
+                        "odd":
+                            selected["odd"],
+
+                        "value_score":
+                            selected["value_score"],
+
+                        "second_market":
+                            selected["second_market"],
+
+                        "second_score":
+                            selected["second_score"],
+
+                        "second_odd":
+                            selected["second_odd"],
+
+                        "markets":
+                            analysis["markets"],
+
+                        "odds":
+                            fixture_odds,
+
+                        "home_form":
+                            home_form,
+
+                        "away_form":
+                            away_form
+                    }
+                )
 
         progress.progress(
             (
@@ -1422,7 +1571,7 @@ if scan:
 
     analysed.sort(
         key=lambda x:
-            x["score"],
+            x.get("value_score", x["score"]),
         reverse=True
     )
 
@@ -1506,11 +1655,11 @@ if scan:
                 st.markdown(
                     f"### "
                     f"{icon} "
-                    f"{match['market']}"
+                    f"{match['market']} • {match['odd']:.2f}"
                 )
 
                 st.caption(
-                    grade
+                    f"{grade} • Oran filtresi {MIN_ODD:.2f}-{MAX_ODD:.2f}"
                 )
 
                 if (
@@ -1521,10 +1670,17 @@ if scan:
                     "-"
                 ):
 
+                    second_odd_text = (
+                        f" • {match['second_odd']:.2f}"
+                        if match.get("second_odd") is not None
+                        else ""
+                    )
+
                     st.caption(
                         f"2. seçenek: "
                         f"{match['second_market']} "
                         f"{match['second_score']}/100"
+                        f"{second_odd_text}"
                     )
 
             with c2:
@@ -1661,11 +1817,19 @@ if scan:
                     "❌"
                 )
 
+                market_odd = match.get("odds", {}).get(market)
+                odd_text = (
+                    f" • oran {market_odd:.2f}"
+                    if market_odd is not None
+                    else " • oran yok"
+                )
+
                 st.write(
                     f"{mark} "
                     f"**{market}:** "
                     f"{market_score}/100 "
                     f"• eşik {minimum}"
+                    f"{odd_text}"
                 )
 
     # =====================================================

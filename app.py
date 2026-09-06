@@ -8,246 +8,174 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# =========================================================
-# iPHONE / MOBİL TASARIM
-# =========================================================
+# =========================
+# MOBİL TASARIM
+# =========================
 st.markdown("""
 <style>
 
-/* STREAMLIT GEREKSİZ ALANLARI KALDIR */
-#MainMenu {
-    visibility: hidden !important;
-}
+/* Streamlit üst/alt gereksiz alanlar */
+#MainMenu {display:none !important;}
+footer {display:none !important;}
 
-header {
-    visibility: hidden !important;
-    height: 0 !important;
-}
-
-footer {
-    visibility: hidden !important;
-}
-
-.stDeployButton {
-    display: none !important;
+header[data-testid="stHeader"] {
+    display:none !important;
 }
 
 [data-testid="stToolbar"] {
-    display: none !important;
+    display:none !important;
 }
 
 [data-testid="stDecoration"] {
-    display: none !important;
+    display:none !important;
 }
 
 [data-testid="stStatusWidget"] {
-    display: none !important;
+    display:none !important;
 }
 
-/* SAYFA */
-html, body, [data-testid="stAppViewContainer"] {
-    background: #03111f !important;
+.stDeployButton {
+    display:none !important;
 }
 
-[data-testid="stAppViewContainer"] {
-    min-height: 100vh;
+/* Ana ekran */
+html, body {
+    background:#03111f !important;
 }
 
+[data-testid="stAppViewContainer"],
 [data-testid="stMain"] {
-    background: #03111f !important;
+    background:#03111f !important;
 }
 
 .block-container {
-    padding-top: 8px !important;
-    padding-bottom: 25px !important;
-    padding-left: 16px !important;
-    padding-right: 16px !important;
-    max-width: 700px !important;
+    max-width:650px !important;
+    padding-top:8px !important;
+    padding-left:14px !important;
+    padding-right:14px !important;
+    padding-bottom:40px !important;
 }
 
-/* LOGO */
-.logo-wrap {
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    margin: 0 0 8px 0;
+/* Logo */
+[data-testid="stImage"] {
+    text-align:center;
 }
 
-.logo-wrap img {
-    width: min(100%, 360px);
-    max-height: 290px;
-    object-fit: contain;
-    border-radius: 18px;
+[data-testid="stImage"] img {
+    width:100% !important;
+    max-width:300px !important;
+    border-radius:18px !important;
+    display:block !important;
+    margin:auto !important;
 }
 
-/* YEŞİL ÇİZGİ */
-.green-line {
-    width: 115px;
-    height: 4px;
-    margin: 8px auto 16px auto;
-    border-radius: 20px;
-    background: #16e887;
-    box-shadow: 0 0 14px rgba(22,232,135,.55);
+/* Yeşil ayraç */
+.kl-line {
+    width:120px;
+    height:4px;
+    border-radius:20px;
+    background:#1bea8b;
+    margin:8px auto 14px auto;
+    box-shadow:0 0 12px rgba(27,234,139,.6);
 }
 
-/* 3 KUTU */
-.info-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-    margin-bottom: 14px;
+/* METRIC KARTLARI */
+[data-testid="stMetric"] {
+    background:#0a1b2c !important;
+    border:1px solid #1c405e !important;
+    border-radius:15px !important;
+    padding:10px 4px !important;
+    min-height:90px !important;
+    text-align:center !important;
 }
 
-.info-card {
-    min-width: 0;
-    height: 105px;
-    border: 1px solid #1c405e;
-    border-radius: 17px;
-    background: #0a1b2c;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 7px 4px;
+[data-testid="stMetricLabel"] {
+    justify-content:center !important;
 }
 
-.info-icon {
-    font-size: 25px;
-    line-height: 1;
-    margin-bottom: 8px;
+[data-testid="stMetricLabel"] p {
+    color:#8798ad !important;
+    font-size:10px !important;
+    text-align:center !important;
 }
 
-.info-title {
-    color: white;
-    font-size: 14px;
-    line-height: 1.15;
-    font-weight: 800;
-    white-space: nowrap;
+[data-testid="stMetricValue"] {
+    color:white !important;
+    font-size:15px !important;
+    font-weight:800 !important;
+    text-align:center !important;
 }
 
-.info-sub {
-    color: #8292a7;
-    font-size: 10px;
-    line-height: 1.2;
-    margin-top: 6px;
-}
-
-/* TÜM NORMAL YAZILAR */
-label,
+/* Tarih başlığı */
 [data-testid="stWidgetLabel"] p {
-    color: #e7edf5 !important;
+    color:#e8edf4 !important;
+    font-size:14px !important;
 }
 
-/* TARİH */
-[data-testid="stDateInput"] {
-    margin-bottom: 4px !important;
-}
-
+/* Tarih */
 [data-testid="stDateInput"] input {
-    min-height: 45px !important;
-    border-radius: 12px !important;
+    min-height:44px !important;
+    border-radius:12px !important;
 }
 
-/* EXPANDER */
+/* Expander */
 [data-testid="stExpander"] {
-    background: #091b2d !important;
-    border: 1px solid #1b3b57 !important;
-    border-radius: 14px !important;
-    margin-bottom: 7px !important;
+    background:#091b2d !important;
+    border:1px solid #1c405e !important;
+    border-radius:14px !important;
+    margin-bottom:7px !important;
 }
 
 [data-testid="stExpander"] summary {
-    min-height: 46px !important;
-    padding-top: 7px !important;
-    padding-bottom: 7px !important;
+    min-height:46px !important;
 }
 
 [data-testid="stExpander"] summary p {
-    color: #e7edf5 !important;
-    font-size: 14px !important;
+    color:#e7edf5 !important;
+    font-size:14px !important;
 }
 
-/* BUTON */
-div.stButton {
-    margin-top: 4px !important;
-}
-
+/* Ana buton */
 div.stButton > button {
-    width: 100% !important;
-    min-height: 55px !important;
-    border: 0 !important;
-    border-radius: 16px !important;
-
-    background: linear-gradient(
-        135deg,
-        #11d978,
-        #21f292
-    ) !important;
-
-    color: #02140d !important;
-    font-size: 18px !important;
-    font-weight: 900 !important;
-
-    box-shadow:
-        0 8px 24px rgba(20,230,130,.20) !important;
+    width:100% !important;
+    min-height:56px !important;
+    border:none !important;
+    border-radius:16px !important;
+    background:linear-gradient(135deg,#10d979,#20f293) !important;
+    color:#02140d !important;
+    font-size:18px !important;
+    font-weight:900 !important;
+    box-shadow:0 8px 25px rgba(20,230,130,.22) !important;
 }
 
 div.stButton > button:active {
-    transform: scale(.98);
+    transform:scale(.98);
 }
 
-/* SONUÇ KUTUSU */
-.result-box {
-    background: #091b2d;
-    border: 1px solid #1c405e;
-    border-radius: 15px;
-    padding: 14px;
-    margin-top: 12px;
-    color: white;
-}
-
-/* MOBİL */
-@media (max-width: 600px) {
+/* Mobil */
+@media (max-width:600px) {
 
     .block-container {
-        padding-top: 3px !important;
-        padding-left: 13px !important;
-        padding-right: 13px !important;
+        padding-top:4px !important;
+        padding-left:12px !important;
+        padding-right:12px !important;
     }
 
-    .logo-wrap img {
-        width: 285px !important;
-        max-height: 230px !important;
+    [data-testid="stImage"] img {
+        max-width:255px !important;
     }
 
-    .green-line {
-        margin-top: 3px;
-        margin-bottom: 12px;
+    [data-testid="stMetric"] {
+        min-height:82px !important;
+        padding:8px 2px !important;
     }
 
-    .info-grid {
-        gap: 6px;
-        margin-bottom: 10px;
+    [data-testid="stMetricValue"] {
+        font-size:13px !important;
     }
 
-    .info-card {
-        height: 92px;
-        border-radius: 14px;
-    }
-
-    .info-icon {
-        font-size: 22px;
-        margin-bottom: 6px;
-    }
-
-    .info-title {
-        font-size: 12px;
-    }
-
-    .info-sub {
-        font-size: 9px;
-        margin-top: 4px;
+    [data-testid="stMetricLabel"] p {
+        font-size:9px !important;
     }
 }
 
@@ -255,149 +183,133 @@ div.stButton > button:active {
 """, unsafe_allow_html=True)
 
 
-# =========================================================
+# =========================
 # LOGO
-# =========================================================
+# =========================
+try:
+    st.image("kuponlab_logo.png", use_container_width=False)
+except:
+    st.markdown(
+        "<h1 style='text-align:center;color:white;'>⚽ Kupon<span style='color:#19e889'>Lab</span></h1>",
+        unsafe_allow_html=True
+    )
 
-st.markdown("""
-<div class="logo-wrap">
-    <img src="https://raw.githubusercontent.com/ymertylmz/KuponLab/main/kuponlab_logo.png">
-</div>
-
-<div class="green-line"></div>
-""", unsafe_allow_html=True)
-
-
-# =========================================================
-# BİLGİ KARTLARI
-# =========================================================
-
-st.markdown("""
-<div class="info-grid">
-
-    <div class="info-card">
-        <div class="info-icon">📊</div>
-        <div class="info-title">40 seçili lig</div>
-        <div class="info-sub">Sadece önemli ligler</div>
-    </div>
-
-    <div class="info-card">
-        <div class="info-icon">🧠</div>
-        <div class="info-title">Veri analizi</div>
-        <div class="info-sub">Son 5 maç formu</div>
-    </div>
-
-    <div class="info-card">
-        <div class="info-icon">🎯</div>
-        <div class="info-title">Akıllı öneriler</div>
-        <div class="info-sub">Gerçekçi marketler</div>
-    </div>
-
-</div>
-""", unsafe_allow_html=True)
-
-
-# =========================================================
-# TARİH
-# =========================================================
-
-selected_date = st.date_input(
-    "📅 Analiz tarihi",
-    value=date.today()
+st.markdown(
+    '<div class="kl-line"></div>',
+    unsafe_allow_html=True
 )
 
 
-# =========================================================
-# LİGLER
-# =========================================================
+# =========================
+# 3 BİLGİ KARTI
+# =========================
+c1, c2, c3 = st.columns(3, gap="small")
 
+with c1:
+    st.metric(
+        label="Sadece önemli ligler",
+        value="📊 40 Lig"
+    )
+
+with c2:
+    st.metric(
+        label="Son 5 maç formu",
+        value="🧠 Analiz"
+    )
+
+with c3:
+    st.metric(
+        label="Gerçekçi marketler",
+        value="🎯 Öneriler"
+    )
+
+
+# =========================
+# TARİH
+# =========================
+selected_date = st.date_input(
+    "📅 Analiz tarihi",
+    value=date.today(),
+    format="YYYY/MM/DD"
+)
+
+
+# =========================
+# LİGLER
+# =========================
 with st.expander("🌍 Taranan 40 ligi göster"):
 
-    st.markdown("""
-🇹🇷 Türkiye Süper Lig  
-🏴 İngiltere Premier League  
-🇪🇸 İspanya LaLiga  
-🇩🇪 Almanya Bundesliga  
-🇮🇹 İtalya Serie A  
-🇫🇷 Fransa Ligue 1  
-🇳🇱 Hollanda Eredivisie  
-🇵🇹 Portekiz Primeira Liga  
-🇧🇪 Belçika Pro League  
-🇩🇰 Danimarka Superliga  
-🇳🇴 Norveç Eliteserien  
-🇸🇪 İsveç Allsvenskan  
-🇨🇭 İsviçre Super League  
-🇦🇹 Avusturya Bundesliga  
-🇬🇷 Yunanistan Super League  
-🇨🇿 Çekya 1. Liga  
-🇵🇱 Polonya Ekstraklasa  
-🇭🇷 Hırvatistan HNL  
-🇷🇸 Sırbistan Super Liga  
-🇷🇴 Romanya Liga I  
-🇭🇺 Macaristan NB I  
-🇧🇬 Bulgaristan First League  
-🇺🇦 Ukrayna Premier League  
-🇸🇰 Slovakya Super Liga  
-🇨🇾 Kıbrıs First Division  
-🇮🇱 İsrail Ligat Ha'Al  
-🇹🇷 Türkiye 1. Lig  
-🏴 Championship  
-🇩🇪 2. Bundesliga  
-🇩🇪 3. Liga  
-🇳🇱 Eerste Divisie  
-🇧🇪 Challenger Pro League  
-🇳🇴 Norveç 1. Division  
-🇫🇷 Ligue 2  
-🇪🇸 LaLiga 2  
-🇮🇹 Serie B  
-🏆 UEFA Champions League  
-🏆 UEFA Europa League  
-🏆 UEFA Conference League  
-🌍 FIFA / UEFA seçili maçlar
-""")
+    st.write("🇹🇷 Türkiye Süper Lig")
+    st.write("🏴 İngiltere Premier League")
+    st.write("🇪🇸 İspanya LaLiga")
+    st.write("🇩🇪 Almanya Bundesliga")
+    st.write("🇮🇹 İtalya Serie A")
+    st.write("🇫🇷 Fransa Ligue 1")
+    st.write("🇳🇱 Hollanda Eredivisie")
+    st.write("🇵🇹 Portekiz Primeira Liga")
+    st.write("🇧🇪 Belçika Pro League")
+    st.write("🇩🇰 Danimarka Superliga")
+    st.write("🇳🇴 Norveç Eliteserien")
+    st.write("🇸🇪 İsveç Allsvenskan")
+    st.write("🇨🇭 İsviçre Super League")
+    st.write("🇦🇹 Avusturya Bundesliga")
+    st.write("🇬🇷 Yunanistan Super League")
+    st.write("🇨🇿 Çekya 1. Liga")
+    st.write("🇵🇱 Polonya Ekstraklasa")
+    st.write("🇭🇷 Hırvatistan HNL")
+    st.write("🇷🇸 Sırbistan Super Liga")
+    st.write("🇷🇴 Romanya Liga I")
+    st.write("🇭🇺 Macaristan NB I")
+    st.write("🇧🇬 Bulgaristan First League")
+    st.write("🇺🇦 Ukrayna Premier League")
+    st.write("🇸🇰 Slovakya Super Liga")
+    st.write("🇨🇾 Kıbrıs First Division")
+    st.write("🇮🇱 İsrail Ligat Ha'Al")
+    st.write("🇹🇷 Türkiye 1. Lig")
+    st.write("🏴 Championship")
+    st.write("🇩🇪 2. Bundesliga")
+    st.write("🇩🇪 3. Liga")
+    st.write("🇳🇱 Eerste Divisie")
+    st.write("🇧🇪 Challenger Pro League")
+    st.write("🇳🇴 Norveç 1. Division")
+    st.write("🇫🇷 Ligue 2")
+    st.write("🇪🇸 LaLiga 2")
+    st.write("🇮🇹 Serie B")
+    st.write("🏆 Şampiyonlar Ligi")
+    st.write("🏆 Avrupa Ligi")
+    st.write("🏆 Konferans Ligi")
+    st.write("🌍 Seçili uluslararası maçlar")
 
 
-# =========================================================
+# =========================
 # MARKETLER
-# =========================================================
-
+# =========================
 with st.expander("🎯 Kullanılan marketleri göster"):
 
-    st.markdown("""
-⚽ Maç Sonucu 1 / X / 2  
-⚽ Çifte Şans  
-⚽ 1.5 Üst  
-⚽ 2.5 Üst  
-⚽ 3.5 Üst  
-⚽ Karşılıklı Gol  
-⚽ İlk Yarı Sonucu  
-⚽ İlk Yarı 0.5 Üst  
-⚽ Ev Sahibi Gol  
-⚽ Deplasman Gol
-""")
+    st.write("⚽ Maç Sonucu 1 / X / 2")
+    st.write("⚽ Çifte Şans")
+    st.write("⚽ 1.5 Üst")
+    st.write("⚽ 2.5 Üst")
+    st.write("⚽ 3.5 Üst")
+    st.write("⚽ Karşılıklı Gol")
+    st.write("⚽ İlk Yarı Sonucu")
+    st.write("⚽ İlk Yarı 0.5 Üst")
+    st.write("⚽ Ev Sahibi Gol")
+    st.write("⚽ Deplasman Gol")
 
 
-# =========================================================
-# TARAMA
-# =========================================================
-
-tara = st.button(
+# =========================
+# GÜNÜ TARA
+# =========================
+if st.button(
     "🔍 GÜNÜ TARA",
     use_container_width=True,
     type="primary"
-)
+):
+    st.success(
+        f"⚽ {selected_date.strftime('%d.%m.%Y')} için tarama başlatıldı."
+    )
 
-
-if tara:
-
-    st.markdown(
-        f"""
-        <div class="result-box">
-            <b>⚽ KuponLab taraması başladı</b><br><br>
-            📅 Tarih: {selected_date.strftime("%d.%m.%Y")}<br>
-            🌍 40 lig taranıyor...<br>
-            🧠 Maç verileri analiz ediliyor...
-        </div>
-        """,
-        unsafe_allow_html=True
+    st.info(
+        "🌍 40 lig taranıyor • 🧠 Maç verileri analiz ediliyor..."
     )

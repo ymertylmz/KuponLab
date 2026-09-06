@@ -189,13 +189,13 @@ ALLOWED_LEAGUE_IDS = set(LEAGUES.keys())
 # =========================================================
 
 MARKET_LIMITS = {
-    "2.5 Üst": 74,
-    "3.5 Üst": 71,
-    "KG Var": 73,
-    "MS 1": 72,
-    "MS 2": 72,
-    "1X": 76,
-    "X2": 76,
+    "2.5 Üst": 70,
+    "3.5 Üst": 68,
+    "KG Var": 70,
+    "MS 1": 69,
+    "MS 2": 69,
+    "1X": 72,
+    "X2": 72,
 }
 
 # KuponLab oran filtresi

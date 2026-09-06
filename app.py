@@ -1214,14 +1214,43 @@ if scan:
             "short"
         ]
 
+        # Geçmiş / başlamış / bitmiş maçları kupona alma.
+        # Bugün taranıyorsa yalnızca Türkiye saatine göre henüz başlamamış maçlar kalır.
+        # Gelecek tarihlerde tüm planlanmış maçlar taranır.
         if status in [
             "CANC",
             "PST",
             "ABD",
             "AWD",
-            "WO"
+            "WO",
+            "1H",
+            "HT",
+            "2H",
+            "ET",
+            "BT",
+            "P",
+            "SUSP",
+            "INT",
+            "FT",
+            "AET",
+            "PEN",
+            "LIVE"
         ]:
             continue
+
+        if selected_date == datetime.now(ZoneInfo("Europe/Istanbul")).date():
+            try:
+                fixture_dt = datetime.fromisoformat(
+                    fixture["fixture"]["date"].replace("Z", "+00:00")
+                ).astimezone(ZoneInfo("Europe/Istanbul"))
+
+                now_tr = datetime.now(ZoneInfo("Europe/Istanbul"))
+
+                if fixture_dt <= now_tr:
+                    continue
+            except Exception:
+                # Saat okunamazsa başlamış maçın yanlışlıkla kupona girmemesi için ele.
+                continue
 
         fixtures.append(
             fixture
